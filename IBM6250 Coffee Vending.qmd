@@ -48,7 +48,11 @@ library(gt)
 library(plotly)
 ```
 
-### Transaction Data
+### Raw Transaction Data
+
+Transaction data was taken from the following Kaggle link:
+
+<https://www.kaggle.com/datasets/ihelon/coffee-sales>
 
 ```{r load-data, warning=FALSE}
 machine1 <- read_csv("data/index_1.csv") %>% 
@@ -61,6 +65,8 @@ sales <- bind_rows(machine1, machine2) |>
   mutate(date = as_date(date),
          datetime = as_datetime(datetime),
          coffee_name=toupper(coffee_name))
+
+skim(sales)
 ```
 
 ### Products and Ingredients
@@ -172,7 +178,7 @@ datatable(
 
 ```{r interactive-weekly-chart}
 #| fig-cap: "Weekly ingredient demand vs. cups sold"
-#| echo: true
+#| echo: false
 
 
 
