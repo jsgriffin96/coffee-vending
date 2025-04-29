@@ -6,11 +6,12 @@ format:
     toc: true            
     toc-depth: 3         
     self-contained: true
-  revealjs:                    
+  revealjs:
     theme: simple             
     slide-level: 2            
     incremental: true         
-    self-contained: true      
+    self-contained: true
+    output-file: IBM6250-Coffee-Vending-revealjs.html
 editor: visual
 ---
 
