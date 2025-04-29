@@ -6,6 +6,11 @@ format:
     toc: true            
     toc-depth: 3         
     self-contained: true
+  revealjs:                    
+    theme: simple             
+    slide-level: 2            
+    incremental: true         
+    self-contained: true      
 editor: visual
 ---
 
@@ -15,10 +20,10 @@ Effective inventory control for coffee-vending machines hinges on anticipating w
 
 ### This report:
 
-1. Imports & cleans transaction data from two coffee-vending machines.  
-2. Explores key demand drivers.  
-3. Models weekly sales with Seasonal ARIMA (plus Prophet as a benchmark).  
-4. Delivers eight-week forecasts and stocking recommendations.
+1.  Imports & cleans transaction data from two coffee-vending machines.\
+2.  Explores key demand drivers.\
+3.  Models weekly sales with Seasonal ARIMA (plus Prophet as a benchmark).\
+4.  Delivers eight-week forecasts and stocking recommendations.
 
 ## Data Input and Combining
 
@@ -42,7 +47,6 @@ library(gt)
 library(plotly)
 ```
 
-
 ### Transaction Data
 
 ```{r load-data, warning=FALSE}
@@ -58,10 +62,9 @@ sales <- bind_rows(machine1, machine2) |>
          coffee_name=toupper(coffee_name))
 ```
 
-
 ### Products and Ingredients
 
-In the dataset, only product names are given. In order to more accurately predict what ingredients are needed and when, we must decompose the product into its ingredients. See below for the assumptions made for each of the `r length(unique(sales$coffee_name))` unique products. 
+In the dataset, only product names are given. In order to more accurately predict what ingredients are needed and when, we must decompose the product into its ingredients. See below for the assumptions made for each of the `r length(unique(sales$coffee_name))` unique products.
 
 ```{r recipie list}
 recipes <- tribble(
@@ -129,7 +132,6 @@ datatable(
 )
 ```
 
-
 ### Converting to Weekly Series
 
 We aggregate to a weekly time series because the business decisions we are informing, like re-ordering coffee, milk, chocolate, etc, are made on a weekly cadence. Collapsing daily transactions into weeks smooths out erratic, day-to-day swings leaving a cleaner signal that aligns directly with the quantity we must predict.
@@ -150,6 +152,7 @@ weekly_sales <- weekly_sales|>
 
 has_gaps(weekly_sales)
 ```
+
 ### Final Data for use in Analysis
 
 ```{r diplay weekly data}
