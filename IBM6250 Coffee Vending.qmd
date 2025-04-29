@@ -1,0 +1,204 @@
+---
+title: "IBM6250 Group Project - Coffee Vending"
+author: "Group 1"
+format:
+  html:
+    toc: true            
+    toc-depth: 3         
+    self-contained: true
+editor: visual
+---
+
+## Introduction
+
+Effective inventory control for coffee-vending machines hinges on anticipating weekly ingredient consumption while avoiding costly spoilage. We forecast demand using historical sales from two machines, delivering eight-week projections that guide stock levels and reorder cadence.
+
+### This report:
+
+1. Imports & cleans transaction data from two coffee-vending machines.  
+2. Explores key demand drivers.  
+3. Models weekly sales with Seasonal ARIMA (plus Prophet as a benchmark).  
+4. Delivers eight-week forecasts and stocking recommendations.
+
+## Data Input and Combining
+
+Kaggle data is from two vending machines. Below we will import the two datasets and combine them.
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(message = FALSE, warning = FALSE)
+library(tidyverse)
+library(lubridate)
+library(timetk)
+library(tsibble)
+library(DT)
+library(plotly)
+library(tidyr)
+library(dplyr)
+
+library(skimr)
+library(forecast)
+library(tseries)
+library(gt)
+library(plotly)
+```
+
+
+### Transaction Data
+
+```{r load-data, warning=FALSE}
+machine1 <- read_csv("data/index_1.csv") %>% 
+  mutate(machine_id = "machine1")
+
+machine2 <- read_csv("data/index_2.csv") %>% 
+  mutate(machine_id = "machine2")
+
+sales <- bind_rows(machine1, machine2) |> 
+  mutate(date = as_date(date),
+         datetime = as_datetime(datetime),
+         coffee_name=toupper(coffee_name))
+```
+
+
+### Products and Ingredients
+
+In the dataset, only product names are given. In order to more accurately predict what ingredients are needed and when, we must decompose the product into its ingredients. See below for the assumptions made for each of the `r length(unique(sales$coffee_name))` unique products. 
+
+```{r recipie list}
+recipes <- tribble(
+  ~coffee_name,                  ~coffee, ~milk, ~chocolate, ~caramel, ~whiskey, ~tea, ~vanilla,
+  "AMERICANO",                     1,       0,         0,         0,         0,     0,        0,
+  "AMERICANO WITH MILK",           1,       1,         0,         0,         0,     0,        0,
+  "CAPPUCCINO",                    1,       1,         0,         0,         0,     0,        0,
+  "CARAMEL",                       0,       0,         0,         1,         0,     0,        0,
+  "CARAMEL COFFEE",                1,       0,         0,         1,         0,     0,        0,
+  "CARAMEL WITH CHOCOLATE",        0,       0,         1,         1,         0,     0,        0,
+  "CARAMEL WITH IRISH WHISKEY",    0,       0,         0,         1,         1,     0,        0,
+  "CARAMEL WITH MILK",             0,       1,         0,         1,         0,     0,        0,
+  "CHOCOLATE",                     0,       0,         1,         0,         0,     0,        0,
+  "CHOCOLATE WITH COFFEE",         1,       0,         1,         0,         0,     0,        0,
+  "CHOCOLATE WITH MILK",           0,       1,         1,         0,         0,     0,        0,
+  "COCOA",                         0,       0,         1,         0,         0,     0,        0,
+  "COFFEE WITH CHOCOLATE",         1,       0,         1,         0,         0,     0,        0,
+  "COFFEE WITH IRISH WHISKEY",     1,       0,         0,         0,         1,     0,        0,
+  "CORTADO",                       1,       1,         0,         0,         0,     0,        0,
+  "DOUBLE CHOCOLATE",              0,       0,         2,         0,         0,     0,        0,
+  "DOUBLE ESPRESSO",               2,       0,         0,         0,         0,     0,        0,
+  "DOUBLE ESPRESSO WITH MILK",     2,       1,         0,         0,         0,     0,        0,
+  "DOUBLE IRISH WHISKEY",          0,       0,         0,         0,         2,     0,        0,
+  "DOUBLE RISTRETTO",              2,       0,         0,         0,         0,     0,        0,
+  "DOUBLE VANILLA",                0,       0,         0,         0,         0,     0,        2,
+  "ESPRESSO",                      1,       0,         0,         0,         0,     0,        0,
+  "HOT CHOCOLATE",                 0,       0,         1,         0,         0,     0,        0,
+  "HOT MILKSHAKE",                 0,       1,         0,         0,         0,     0,        0,
+  "IRISH WHISKEY",                 0,       0,         0,         0,         1,     0,        0,
+  "IRISH WHISKEY WITH MILK",       0,       1,         0,         0,         1,     0,        0,
+  "IRISH WITH CHOCOLATE",          0,       0,         1,         0,         1,     0,        0,
+  "LATTE",                         1,       2,         0,         0,         0,     0,        0,
+  "MOCHACCINO",                    1,       1,         1,         0,         0,     0,        0,
+  "SUPER CHOCOLATE",               0,       0,         3,         0,         0,     0,        0,
+  "TEA",                           0,       0,         0,         0,         0,     1,        0,
+  "VANILLA COFFEE",                1,       0,         0,         0,         0,     0,        1,
+  "VANILLA WITH IRISH WHISKEY",    0,       0,         0,         0,         1,     0,        1
+)
+```
+
+### Combining Transaction Data and Recipies
+
+Below we will join the two tables on the coffee name, which will add ingredients to all rows in the transaction data. Explore the data we will use in our analysis below:
+
+```{r join-recipies}
+sales_ingredients <- sales |>
+  left_join(recipes, by = "coffee_name") |>
+  replace_na(list(
+    coffee = 0, milk = 0, chocolate = 0, caramel = 0,
+    whiskey = 0, tea = 0, vanilla = 0
+  ))
+```
+
+```{r diplay data with ingredients}
+#| echo: false
+
+datatable(
+  sales_ingredients,
+  extensions = 'Buttons',             
+  options = list(
+    dom     = 'Bfrtip',                # place Buttons at the top
+    buttons = c('copy', 'csv'),
+    pageLength = 5
+  )
+)
+```
+
+
+### Converting to Weekly Series
+
+We aggregate to a weekly time series because the business decisions we are informing, like re-ordering coffee, milk, chocolate, etc, are made on a weekly cadence. Collapsing daily transactions into weeks smooths out erratic, day-to-day swings leaving a cleaner signal that aligns directly with the quantity we must predict.
+
+We will also convert to a time series type object and verify it has no gaps in the series. If we see FALSE from .gaps, then we have no gaps.
+
+```{r weekly data}
+
+weekly_sales <- sales_ingredients |>
+  mutate(week = lubridate::floor_date(date, unit = "week")) |>
+  group_by(week) |>
+  summarise(across(coffee:vanilla, sum, na.rm = TRUE),
+            sales_n = n()) |>
+  ungroup()
+
+weekly_sales <- weekly_sales|>
+  as_tsibble(index = week)
+
+has_gaps(weekly_sales)
+```
+### Final Data for use in Analysis
+
+```{r diplay weekly data}
+#| echo: false
+
+datatable(
+  weekly_sales,
+  extensions = 'Buttons',             
+  options = list(
+    dom     = 'Bfrtip',                # place Buttons at the top
+    buttons = c('copy', 'csv'),
+    pageLength = 5
+  )
+)
+```
+
+```{r interactive-weekly-chart}
+#| fig-cap: "Weekly ingredient demand vs. cups sold"
+#| echo: true
+
+
+
+# 1. Reshape to long format: one row per week-metric pair -------------
+weekly_long <- weekly_sales |>
+  pivot_longer(
+    cols      = coffee:sales_n,   # everything after the 'week' column
+    names_to  = "metric",
+    values_to = "value"
+  )
+
+# 2. Build the interactive plot --------------------------------------
+plot_ly(
+  data  = weekly_long,
+  x     = ~week,
+  y     = ~value,
+  color = ~metric,
+  type  = "scatter",
+  mode  = "lines+markers",
+  hovertemplate = paste(
+    "<b>%{x|%Y-%m-%d}</b><br>",
+    "%{text}: %{y}<extra></extra>"
+  ),
+  text = ~metric
+) %>% 
+  layout(
+    hovermode = "x unified",
+    legend    = list(title = list(text = "Metric")),
+    yaxis     = list(title = "Units"),
+    xaxis     = list(title = "Week")
+  )
+
+```
