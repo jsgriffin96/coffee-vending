@@ -40,7 +40,11 @@ library(DT)
 library(plotly)
 library(tidyr)
 library(dplyr)
-
+library(fpp3)
+library(scales)
+library(fabletools)
+library(fable)
+library(feasts)
 library(skimr)
 library(forecast)
 library(tseries)
@@ -212,3 +216,87 @@ plot_ly(
   )
 
 ```
+
+## Exploratory Data Analysis(EDA)
+
+```{r}
+
+#weekly total sales per machine
+weekly_sales_per_machine <- sales_ingredients |>
+  mutate(week = lubridate::floor_date(date, unit = "week")) |>
+  group_by(machine_id, week) |>
+  summarise(across(coffee:vanilla, sum, na.rm = TRUE),
+            sales_n = n(),
+            .groups = "drop") |>
+  as_tsibble(index = week, key = machine_id)
+
+weekly_sales_per_machine %>% 
+  autoplot(sales_n)+
+  labs(title = "Weekly Total Sales per Machine",
+       y = "Number of Sales",
+       x = "Week") +
+  guides(color = guide_legend(title = "Machine ID")) +
+  theme_minimal()
+```
+
+```{r}
+
+
+#Decomposition of Weekly Ingredient Usage
+decomposed <- weekly_long %>%
+  filter(metric != "sales_n") %>%
+  model(STL(value)) %>%
+  components()
+
+
+autoplot(decomposed) +
+  facet_wrap(~metric, scales = "free_y") +
+  labs(title = "Decomposition of Weekly Ingredient Usage",
+       x = "Week",
+       y = NULL) +
+  theme_minimal()+
+  theme(legend.position = "none")+
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+```
+
+```{r}
+#checking Autocorrelation of each ingredients
+weekly_long %>%
+  filter(metric != "sales_n") %>%
+  group_by(metric) %>%
+  group_walk(~{
+    acf(.x$value, main = paste("ACF for", .y))  
+  })
+```
+
+```{r}
+#Differencing each ingredients
+weekly_diff <- weekly_long %>%
+  filter(metric != "sales_n") %>%
+  group_by(metric) %>%  
+  arrange(week) %>%  
+  mutate(value_diff = difference(value)) %>%  
+  filter(!is.na(value_diff)) %>%  
+  ungroup()
+
+
+
+#ACF for Differenced Ingredients
+weekly_diff %>%
+  group_by(metric) %>%
+  group_walk(~{
+    acf(.x$value_diff, lag.max = 30,
+        main = paste("ACF for Differenced", unique(.y$metric)))
+  })
+```
+
+## Modeling Process
+
+## Model Evaluation and Diagnostics
+
+## Generate Forecasts
+
+## Executive Summary with Actionable Recommendations
+
+## Appendix
