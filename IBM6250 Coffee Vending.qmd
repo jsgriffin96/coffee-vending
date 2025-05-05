@@ -300,3 +300,99 @@ weekly_diff %>%
 ## Executive Summary with Actionable Recommendations
 
 ## Appendix
+
+#### Machine 1
+```{r m1interactive-weekly-chart}
+#| fig-cap: "Machine 1 Weekly ingredient demand vs. cups sold"
+#| echo: false
+
+weekly_sales_machine1 <- sales_ingredients |>
+  filter(machine_id=="machine1") |>
+  mutate(week = lubridate::floor_date(date, unit = "week")) |>
+  group_by(week) |>
+  summarise(across(coffee:vanilla, sum, na.rm = TRUE),
+            sales_n = n()) |>
+  ungroup()
+
+weekly_sales_machine1 <- weekly_sales_machine1|>
+  as_tsibble(index = week)
+
+# 1. Reshape to long format: one row per week-metric pair -------------
+weekly_long_machine1 <- weekly_sales_machine1%>%filter() |>
+  pivot_longer(
+    cols      = coffee:sales_n,   # everything after the 'week' column
+    names_to  = "metric",
+    values_to = "value"
+  )
+
+# 2. Build the interactive plot --------------------------------------
+plot_ly(
+  data  = weekly_long_machine1,
+  x     = ~week,
+  y     = ~value,
+  color = ~metric,
+  type  = "scatter",
+  mode  = "lines+markers",
+  hovertemplate = paste(
+    "<b>%{x|%Y-%m-%d}</b><br>",
+    "%{text}: %{y}<extra></extra>"
+  ),
+  text = ~metric
+) %>% 
+  layout(
+    hovermode = "x unified",
+    legend    = list(title = list(text = "Metric")),
+    yaxis     = list(title = "Units"),
+    xaxis     = list(title = "Week")
+  )
+
+```
+
+#### Machine 2
+```{r m2interactive-weekly-chart}
+#| fig-cap: "Machine 2 Weekly ingredient demand vs. cups sold"
+#| echo: false
+
+weekly_sales_machine2 <- sales_ingredients |>
+  filter(machine_id=="machine2") |>
+  mutate(week = lubridate::floor_date(date, unit = "week")) |>
+  group_by(week) |>
+  summarise(across(coffee:vanilla, sum, na.rm = TRUE),
+            sales_n = n()) |>
+  ungroup()
+
+weekly_sales_machine2 <- weekly_sales_machine2|>
+  as_tsibble(index = week)
+
+# 1. Reshape to long format: one row per week-metric pair -------------
+weekly_long_machine2 <- weekly_sales_machine2%>%filter() |>
+  pivot_longer(
+    cols      = coffee:sales_n,   # everything after the 'week' column
+    names_to  = "metric",
+    values_to = "value"
+  )
+
+# 2. Build the interactive plot --------------------------------------
+plot_ly(
+  data  = weekly_long_machine2,
+  x     = ~week,
+  y     = ~value,
+  color = ~metric,
+  type  = "scatter",
+  mode  = "lines+markers",
+  hovertemplate = paste(
+    "<b>%{x|%Y-%m-%d}</b><br>",
+    "%{text}: %{y}<extra></extra>"
+  ),
+  text = ~metric
+) %>% 
+  layout(
+    hovermode = "x unified",
+    legend    = list(title = list(text = "Metric")),
+    yaxis     = list(title = "Units"),
+    xaxis     = list(title = "Week")
+  )
+
+
+```
+
