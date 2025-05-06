@@ -13,13 +13,10 @@ format:
     self-contained: true
     output-file: IBM6250-Coffee-Vending-revealjs.html
 editor: visual
+bibliography: refrences.bib
 ---
 
 ##### TODO:
-
-Remove Machine 2 from time series
-
-Update ingredient list to real measures(fl. oz.)
 
 Predict 3 things, Overall revenue, drink consumption, ingredient usage
 
@@ -93,46 +90,44 @@ unique(machine1$coffee_name)
 
 In the dataset, only product names are given. In order to more accurately predict what ingredients are needed and when, we must decompose the product into its ingredients. See below for the assumptions made for each of the `r length(unique(sales$coffee_name))` unique products.
 
+#### Unique Products
+
+```{r}
+unique(machine1$coffee_name)%>%sort()
+```
+
+#### Ingredients
+
 ```{r recipie list}
 
 
 recipes <- tribble(
-  ~coffee_name,                  ~coffee, ~milk, ~chocolate, ~caramel, ~sugar, ~tea, ~vanilla,
-  "AMERICANO",                     1,       0,         0,         0,         0,     0,        0,
-  "AMERICANO WITH MILK",           1,       1,         0,         0,         0,     0,        0,
-  "CAPPUCCINO",                    1,       1,         0,         0,         0,     0,        0,
-  "CARAMEL",                       0,       0,         0,         1,         0,     0,        0,
-  "CARAMEL COFFEE",                1,       0,         0,         1,         0,     0,        0,
-  "CARAMEL WITH CHOCOLATE",        0,       0,         1,         1,         0,     0,        0,
-  "CARAMEL WITH IRISH WHISKEY",    0,       0,         0,         1,         1,     0,        0,
-  "CARAMEL WITH MILK",             0,       1,         0,         1,         0,     0,        0,
-  "CHOCOLATE",                     0,       0,         1,         0,         0,     0,        0,
-  "CHOCOLATE WITH COFFEE",         1,       0,         1,         0,         0,     0,        0,
-  "CHOCOLATE WITH MILK",           0,       1,         1,         0,         0,     0,        0,
-  "COCOA",                         0,       0,         1,         0,         0,     0,        0,
-  "COFFEE WITH CHOCOLATE",         1,       0,         1,         0,         0,     0,        0,
-  "COFFEE WITH IRISH WHISKEY",     1,       0,         0,         0,         1,     0,        0,
-  "CORTADO",                       1,       1,         0,         0,         0,     0,        0,
-  "DOUBLE CHOCOLATE",              0,       0,         2,         0,         0,     0,        0,
-  "DOUBLE ESPRESSO",               2,       0,         0,         0,         0,     0,        0,
-  "DOUBLE ESPRESSO WITH MILK",     2,       1,         0,         0,         0,     0,        0,
-  "DOUBLE IRISH WHISKEY",          0,       0,         0,         0,         2,     0,        0,
-  "DOUBLE RISTRETTO",              2,       0,         0,         0,         0,     0,        0,
-  "DOUBLE VANILLA",                0,       0,         0,         0,         0,     0,        2,
-  "ESPRESSO",                      1,       0,         0,         0,         0,     0,        0,
-  "HOT CHOCOLATE",                 0,       0,         1,         0,         0,     0,        0,
-  "HOT MILKSHAKE",                 0,       1,         0,         0,         0,     0,        0,
-  "IRISH WHISKEY",                 0,       0,         0,         0,         1,     0,        0,
-  "IRISH WHISKEY WITH MILK",       0,       1,         0,         0,         1,     0,        0,
-  "IRISH WITH CHOCOLATE",          0,       0,         1,         0,         1,     0,        0,
-  "LATTE",                         1,       2,         0,         0,         0,     0,        0,
-  "MOCHACCINO",                    1,       1,         1,         0,         0,     0,        0,
-  "SUPER CHOCOLATE",               0,       0,         3,         0,         0,     0,        0,
-  "TEA",                           0,       0,         0,         0,         0,     1,        0,
-  "VANILLA COFFEE",                1,       0,         0,         0,         0,     0,        1,
-  "VANILLA WITH IRISH WHISKEY",    0,       0,         0,         0,         1,     0,        1
+  ~coffee_name,            ~coffeeG, ~milkML, ~chocolateG, ~caramelML, ~sugarG, ~vanillaML,
+  "AMERICANO",                18,       0,          0,          0,        0,        0,
+  "AMERICANO WITH MILK",      18,      60,          0,          0,        0,        0,
+  "CAPPUCCINO",               18,      60,          0,          0,        0,        0,
+  "COCOA",                     0,     240,         22,          0,       15,        0,
+  "CORTADO",                  18,      60,          0,          0,        0,        0,
+  "ESPRESSO",                 18,       0,          0,          0,        0,        0,
+  "HOT CHOCOLATE",             0,     240,         30,          0,       20,        0,
+  "LATTE",                    18,     240,          0,          0,        0,       10
 )
+
 ```
+
+##### Ingredient Logic
+| Drink | Ingredient-logic rationale |
+|-------|---------------------------|
+| **Espresso** | Straight double shot: 18 g ground coffee, no additives [@scaEspresso]. |
+| **Americano** | Same 18 g espresso diluted with ≈ 4 × its volume of hot water; nothing else required [@scaEspresso]. |
+| **Americano&nbsp;with&nbsp;Milk** | Americano softened with ≈ 60 ml steamed milk – enough to mellow bitterness without turning it into a latte [@whiteAmericano]. |
+| **Cappuccino** | Classic 1 : 1 : 1 build – espresso, ≈ 60 ml steamed milk, equal micro-foam – fills a 150–180 ml cup [@spruceCappuccino]. |
+| **Cortado** | Spanish “cut” drink: equal parts double espresso and ≈ 60 ml steamed milk [@foodwineCortado]. |
+| **Latte** | U.S. latte stretches the shot with ≈ 240 ml milk (1 : 4–5 ratio); vanilla version adds 10 ml syrup (≈ 2 pumps) [@coffeeBrosLatte; @toraniPump]. |
+| **Cocoa** | Non-coffee mix: 240 ml milk + 22 g cocoa powder + 15 g sugar – standard stovetop proportions [@hersheyCocoa]. |
+| **Hot Chocolate** | Richer café blend: same milk but 30 g cocoa and 20 g sugar for modern sweetness level [@hersheyCocoa]. |
+
+
 
 ### Combining Transaction Data and Recipies
 
@@ -172,7 +167,7 @@ We will also convert to a time series type object and verify it has no gaps in t
 weekly_sales <- sales_ingredients |>
   mutate(week = lubridate::floor_date(date, unit = "week")) |>
   group_by(week) |>
-  summarise(across(coffee:vanilla, sum, na.rm = TRUE),
+  summarise(across(coffeeG:vanillaML, sum, na.rm = TRUE),
             sales_n = n()) |>
   ungroup()
 
@@ -207,7 +202,7 @@ datatable(
 # 1. Reshape to long format: one row per week-metric pair -------------
 weekly_long <- weekly_sales |>
   pivot_longer(
-    cols      = coffee:sales_n,   # everything after the 'week' column
+    cols      = coffeeG:sales_n,   # everything after the 'week' column
     names_to  = "metric",
     values_to = "value"
   )
@@ -243,7 +238,7 @@ plot_ly(
 weekly_sales_per_machine <- sales_ingredients |>
   mutate(week = lubridate::floor_date(date, unit = "week")) |>
   group_by(machine_id, week) |>
-  summarise(across(coffee:vanilla, sum, na.rm = TRUE),
+  summarise(across(coffeeG:vanillaML, sum, na.rm = TRUE),
             sales_n = n(),
             .groups = "drop") |>
   as_tsibble(index = week, key = machine_id)
@@ -353,7 +348,7 @@ weekly_sales_machine1 <- sales_ingredients |>
   filter(machine_id=="machine1") |>
   mutate(week = lubridate::floor_date(date, unit = "week")) |>
   group_by(week) |>
-  summarise(across(coffee:vanilla, sum, na.rm = TRUE),
+  summarise(across(coffeeG:vanillaML, sum, na.rm = TRUE),
             sales_n = n()) |>
   ungroup()
 
@@ -363,7 +358,7 @@ weekly_sales_machine1 <- weekly_sales_machine1|>
 # 1. Reshape to long format: one row per week-metric pair -------------
 weekly_long_machine1 <- weekly_sales_machine1%>%filter() |>
   pivot_longer(
-    cols      = coffee:sales_n,   # everything after the 'week' column
+    cols      = coffeeG:sales_n,   # everything after the 'week' column
     names_to  = "metric",
     values_to = "value"
   )
