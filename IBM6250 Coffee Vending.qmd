@@ -15,6 +15,22 @@ format:
 editor: visual
 ---
 
+##### TODO:
+
+Remove Machine 2 from time series
+
+Update ingredient list to real measures(fl. oz.)
+
+Predict 3 things, Overall revenue, drink consumption, ingredient usage
+
+Forecast-Ceren
+
+EDA-Min
+
+Modeling-Eunice
+
+Input/Intro - Jarrod
+
 ## Introduction
 
 Effective inventory control for coffee-vending machines hinges on anticipating weekly ingredient consumption while avoiding costly spoilage. We forecast demand using historical sales from two machines, delivering eight-week projections that guide stock levels and reorder cadence.
@@ -62,13 +78,14 @@ Transaction data was taken from the following Kaggle link:
 machine1 <- read_csv("data/index_1.csv") %>% 
   mutate(machine_id = "machine1")
 
-machine2 <- read_csv("data/index_2.csv") %>% 
-  mutate(machine_id = "machine2")
-
-sales <- bind_rows(machine1, machine2) |> 
+# machine2 <- read_csv("data/index_2.csv") %>% 
+#   mutate(machine_id = "machine2")
+# 
+sales <- bind_rows(machine1) |>
   mutate(date = as_date(date),
          datetime = as_datetime(datetime),
          coffee_name=toupper(coffee_name))
+
 
 skim(sales)
 ```
@@ -79,7 +96,7 @@ In the dataset, only product names are given. In order to more accurately predic
 
 ```{r recipie list}
 recipes <- tribble(
-  ~coffee_name,                  ~coffee, ~milk, ~chocolate, ~caramel, ~whiskey, ~tea, ~vanilla,
+  ~coffee_name,                  ~coffee, ~milk, ~chocolate, ~caramel, ~sugar, ~tea, ~vanilla,
   "AMERICANO",                     1,       0,         0,         0,         0,     0,        0,
   "AMERICANO WITH MILK",           1,       1,         0,         0,         0,     0,        0,
   "CAPPUCCINO",                    1,       1,         0,         0,         0,     0,        0,
@@ -302,6 +319,7 @@ weekly_diff %>%
 ## Appendix
 
 #### Machine 1
+
 ```{r m1interactive-weekly-chart}
 #| fig-cap: "Machine 1 Weekly ingredient demand vs. cups sold"
 #| echo: false
@@ -348,51 +366,5 @@ plot_ly(
 
 ```
 
-#### Machine 2
-```{r m2interactive-weekly-chart}
-#| fig-cap: "Machine 2 Weekly ingredient demand vs. cups sold"
-#| echo: false
-
-weekly_sales_machine2 <- sales_ingredients |>
-  filter(machine_id=="machine2") |>
-  mutate(week = lubridate::floor_date(date, unit = "week")) |>
-  group_by(week) |>
-  summarise(across(coffee:vanilla, sum, na.rm = TRUE),
-            sales_n = n()) |>
-  ungroup()
-
-weekly_sales_machine2 <- weekly_sales_machine2|>
-  as_tsibble(index = week)
-
-# 1. Reshape to long format: one row per week-metric pair -------------
-weekly_long_machine2 <- weekly_sales_machine2%>%filter() |>
-  pivot_longer(
-    cols      = coffee:sales_n,   # everything after the 'week' column
-    names_to  = "metric",
-    values_to = "value"
-  )
-
-# 2. Build the interactive plot --------------------------------------
-plot_ly(
-  data  = weekly_long_machine2,
-  x     = ~week,
-  y     = ~value,
-  color = ~metric,
-  type  = "scatter",
-  mode  = "lines+markers",
-  hovertemplate = paste(
-    "<b>%{x|%Y-%m-%d}</b><br>",
-    "%{text}: %{y}<extra></extra>"
-  ),
-  text = ~metric
-) %>% 
-  layout(
-    hovermode = "x unified",
-    legend    = list(title = list(text = "Metric")),
-    yaxis     = list(title = "Units"),
-    xaxis     = list(title = "Week")
-  )
-
-
+```{}
 ```
-
