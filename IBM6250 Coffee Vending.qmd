@@ -101,7 +101,7 @@ recipes <- tribble(
   ~coffee_name,            ~coffeeG, ~milkML, ~chocolateG, ~caramelML, ~sugarG, ~vanillaML,
   "AMERICANO",                18,       0,          0,          0,        0,        0,
   "AMERICANO WITH MILK",      18,      60,          0,          0,        0,        0,
-  "CAPPUCCINO",               18,      60,          0,          0,        0,        0,
+  "CAPPUCCINO",               18,     100,          0,          0,        0,        0,
   "COCOA",                     0,     240,         22,          0,       15,        0,
   "CORTADO",                  18,      60,          0,          0,        0,        0,
   "ESPRESSO",                 18,       0,          0,          0,        0,        0,
