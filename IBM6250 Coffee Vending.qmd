@@ -16,17 +16,13 @@ editor: visual
 bibliography: refrences.bib
 ---
 
-##### TODO:
+| Order | Task / Deliverable                           | Owner   | Details |
+|------:|----------------------------------------------|---------|---------|
+| **1** | Input / Intro section                        | Jarrod  | Project overview and report framing |
+| **2** | Exploratory Data Analysis (EDA)              | Min     | Data cleaning, visualization, descriptive stats |
+| **3** | Modeling                                     | Eunice  | Build and validate predictive models |
+| **4** | Forecast                                     | Ceren   | Predict overall revenue, drink consumption, and ingredient usage |
 
-Predict 3 things, Overall revenue, drink consumption, ingredient usage
-
-Forecast-Ceren
-
-EDA-Min
-
-Modeling-Eunice
-
-Input/Intro - Jarrod
 
 ## Introduction
 
