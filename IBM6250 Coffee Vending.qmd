@@ -14,15 +14,16 @@ format:
     output-file: IBM6250-Coffee-Vending-revealjs.html
 editor: visual
 bibliography: refrences.bib
+editor_options: 
+  chunk_output_type: inline
 ---
 
-| Order | Task / Deliverable                           | Owner   | Details |
-|------:|----------------------------------------------|---------|---------|
-| **1** | Input / Intro section                        | Jarrod  | Project overview and report framing |
-| **2** | Exploratory Data Analysis (EDA)              | Min     | Data cleaning, visualization, descriptive stats |
-| **3** | Modeling                                     | Eunice  | Build and validate predictive models |
-| **4** | Forecast                                     | Ceren   | Predict overall revenue, drink consumption, and ingredient usage |
-
+| Order | Task / Deliverable | Owner | Details |
+|-----------:|--------------------------------------|------------|------------|
+| **1** | Input / Intro section | Jarrod | Project overview and report framing |
+| **2** | Exploratory Data Analysis (EDA) | Min | Data cleaning, visualization, descriptive stats |
+| **3** | Modeling | Eunice | Build and validate predictive models |
+| **4** | Forecast | Ceren | Predict overall revenue, drink consumption, and ingredient usage |
 
 ## Introduction
 
@@ -112,18 +113,17 @@ recipes <- tribble(
 ```
 
 ##### Ingredient Logic
+
 | Drink | Ingredient-logic rationale |
-|-------|---------------------------|
+|-----------------|-------------------------------------------------------|
 | **Espresso** | Straight double shot: 18 g ground coffee, no additives [@scaEspresso]. |
 | **Americano** | Same 18 g espresso diluted with ≈ 4 × its volume of hot water; nothing else required [@scaEspresso]. |
-| **Americano&nbsp;with&nbsp;Milk** | Americano softened with ≈ 60 ml steamed milk – enough to mellow bitterness without turning it into a latte [@whiteAmericano]. |
+| **Americano with Milk** | Americano softened with ≈ 60 ml steamed milk – enough to mellow bitterness without turning it into a latte [@whiteAmericano]. |
 | **Cappuccino** | Classic 1 : 1 : 1 build – espresso, ≈ 60 ml steamed milk, equal micro-foam – fills a 150–180 ml cup [@spruceCappuccino]. |
 | **Cortado** | Spanish “cut” drink: equal parts double espresso and ≈ 60 ml steamed milk [@foodwineCortado]. |
 | **Latte** | U.S. latte stretches the shot with ≈ 240 ml milk (1 : 4–5 ratio); vanilla version adds 10 ml syrup (≈ 2 pumps) [@coffeeBrosLatte; @toraniPump]. |
 | **Cocoa** | Non-coffee mix: 240 ml milk + 22 g cocoa powder + 15 g sugar – standard stovetop proportions [@hersheyCocoa]. |
 | **Hot Chocolate** | Richer café blend: same milk but 30 g cocoa and 20 g sugar for modern sweetness level [@hersheyCocoa]. |
-
-
 
 ### Combining Transaction Data and Recipies
 
@@ -228,101 +228,393 @@ plot_ly(
 
 ## Exploratory Data Analysis(EDA)
 
+### Total Revenue Series
+
 ```{r}
+#weekly revenue tsibble
+weekly_revenue <- sales %>%
+  mutate(week = floor_date(date, unit = "week")) %>%
+  group_by(week) %>%
+  summarise(total_revenue = sum(money, na.rm = TRUE), .groups = "drop") %>%
+  as_tsibble(index = week)
+```
 
-#weekly total sales per machine
-weekly_sales_per_machine <- sales_ingredients |>
-  mutate(week = lubridate::floor_date(date, unit = "week")) |>
-  group_by(machine_id, week) |>
-  summarise(across(coffeeG:vanillaML, sum, na.rm = TRUE),
-            sales_n = n(),
-            .groups = "drop") |>
-  as_tsibble(index = week, key = machine_id)
-
-weekly_sales_per_machine %>% 
-  autoplot(sales_n)+
-  labs(title = "Weekly Total Sales per Machine",
-       y = "Number of Sales",
+```{r}
+# weekly total revenue time series plot
+autoplot(weekly_revenue, total_revenue) +
+  labs(title = "Weekly Total Revenue",
+       y = "Revenue ($)",
        x = "Week") +
-  guides(color = guide_legend(title = "Machine ID")) +
+  theme_minimal()
+
+
+#Interactive weekly revenue
+weekly_revenue %>%
+  ggplot(aes(x = week, y = total_revenue)) +
+  geom_line(color = "steelblue", size = 1.2) +
+  labs(title = "Interactive Weekly Revenue",
+       y = "Revenue ($)", x = NULL) +
+  theme_minimal() -> p
+
+ggplotly(p)
+
+```
+
+```{r}
+#STL Decomposition
+decomposed_revenue <- weekly_revenue %>%
+  model(STL(total_revenue ~ season() + trend(), robust = TRUE)) %>%
+  components()
+
+# plot component
+autoplot(decomposed_revenue) +
+  labs(title = "STL Decomposition of Weekly Revenue",
+       x = "Week", y = NULL) +
   theme_minimal()
 ```
 
 ```{r}
+#Differencing
+diff_revenue <- weekly_revenue %>%
+  mutate(diff_revenue = difference(total_revenue, lag = 1))  
 
+autoplot(diff_revenue, diff_revenue) +
+  labs(title = "First Difference of Weekly Revenue",
+       y = "Differenced Revenue",
+       x = "Week") +
+  theme_minimal()
+```
 
-#Decomposition of Weekly Ingredient Usage
-decomposed <- weekly_long %>%
-  filter(metric != "sales_n") %>%
-  model(STL(value)) %>%
+```{r}
+# ACF
+diff_revenue %>%
+  ACF(diff_revenue, lag_max = 30) %>%
+  autoplot() +
+  labs(title = "ACF of Differenced Revenue")
+```
+
+```{r}
+# Summary stats
+summary_stats <- weekly_revenue %>%
+  summarise(
+    mean_revenue = mean(total_revenue, na.rm = TRUE),
+    median_revenue = median(total_revenue, na.rm = TRUE),
+    max_revenue = max(total_revenue, na.rm = TRUE),
+    min_revenue = min(total_revenue, na.rm = TRUE)
+  )
+
+# Highest Weekly Sales
+top_week <- weekly_revenue %>%
+  filter(total_revenue == max(total_revenue, na.rm = TRUE))
+top_week
+
+datatable(summary_stats, caption = "Weekly Revenue Summary Stats")
+
+```
+
+#### 
+
+**Data Description & Exploratory Summary**
+
+-   Dataset Overview
+
+This dataset is derived from the raw sales table and represents the total weekly revenue, aggregated across all transactions from coffee vending machines, covering the period from March 2024 to March 2025, with data on 8 types of coffee.
+
+-   EDA Findings
+
+1.  The weekly time series is complete, with no missing weeks.
+
+2.  The revenue shows a distinct trend composed of three major peaks—a pattern resembling “three hills”.
+
+3.  STL decomposition confirmed a clear trend but no significant seasonality was detected.
+
+4.  After first-order differencing, the series became stationary, with the ACF showing white noise.
+
+-   Key Observations
+
+1.  Highest revenue: Week of October 6, 2024 — \$3,546
+
+2.  Lowest revenue: Week of March 23, 2025 — \$204.76
+
+3.  The fluctuation pattern suggests possible external drivers (e.g., promotions or demand cycles).
+
+-   Assumptions
+
+1.  Revenue can be modeled primarily as a trend-driven process.
+
+2.  The data-generating process in the next 8 weeks will be similar to the recent 8 weeks.
+
+3.  Weekly sales will grow in the next week.
+
+### Coffee Type Series
+
+```{r}
+#sales of each coffee type
+weekly_coffee_volume <- sales %>%
+  mutate(week = floor_date(date, unit = "week")) %>%
+  group_by(week, coffee_name) %>%
+  summarise(
+    total_volume = n(),  
+    .groups = "drop"
+  ) %>%
+  as_tsibble(index = week, key = coffee_name)
+```
+
+```{r}
+# Weekly cups sold by coffee type
+weekly_coffee_volume %>%
+  autoplot(total_volume) +
+  facet_wrap(~coffee_name, scales = "free_y") +
+  labs(title = "Weekly Cups Sold by Coffee Type",
+       y = "Number of Cups", x = "") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1),
+        legend.position = "none")
+```
+
+```{r}
+# Check NA
+missing_data <- weekly_coffee_volume %>%
+  group_by(coffee_name) %>%
+  summarise(missing_weeks = sum(is.na(total_volume)))
+
+#fill gap
+weekly_volume_filled <- weekly_coffee_volume %>%
+  fill_gaps(total_volume = 0)
+
+decomposed_volume <- weekly_volume_filled %>%
+  model(
+    STL(total_volume ~ season(window = 52) + trend(window = 7), robust = TRUE)
+  ) %>%
   components()
 
+autoplot(decomposed_volume) +
+  facet_wrap(~coffee_name, scales = "free_y") +
+  labs(title = "STL Decomposition of Weekly Volume by Coffee Type",
+       x = "Week", y = NULL) +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1),
+        legend.position = "none")
 
-autoplot(decomposed) +
+```
+
+```{r}
+#ACF
+weekly_volume_filled %>%
+  group_by(coffee_name) %>%
+  group_walk(~{
+    v <- .x$total_volume
+    v <- v[is.finite(v)]
+
+    if (length(v) < 2L || var(v) == 0) {
+      message("Skipping ", .y$coffee_name, ": not enough variation.")
+    } else {
+      acf(v,
+          main = paste("ACF for", .y$coffee_name),
+          na.action = na.pass)
+    }
+  })
+
+```
+
+```{r}
+#Differencing
+weekly_volume_diff <- weekly_volume_filled %>%
+  group_by(coffee_name) %>%
+  mutate(diff_volume = difference(total_volume)) %>%
+  ungroup()
+
+```
+
+```{r}
+#check ACF
+weekly_volume_diff %>%
+  filter(!is.na(diff_volume)) %>%
+  group_by(coffee_name) %>%
+  group_walk(~{
+    v <- .x$diff_volume
+    v <- v[is.finite(v)]
+
+    if (length(v) < 2L || var(v) == 0) {
+      message("Skipping ", .y$coffee_name, ": not enough variation.")
+    } else {
+      acf(v,
+          main = paste("ACF after differencing:", .y$coffee_name),
+          na.action = na.pass)
+    }
+  })
+
+```
+
+```{r}
+weekly_volume_diff_2 <- weekly_volume_filled %>%
+  group_by(coffee_name) %>%
+  mutate(diff_volume_2 = difference(total_volume, lag = 2)) %>%
+  ungroup()
+
+
+weekly_volume_diff_2 %>%
+  filter(!is.na(diff_volume_2)) %>%
+  group_by(coffee_name) %>%
+  group_walk(~{
+    v <- .x$diff_volume_2
+    v <- v[is.finite(v)]
+
+    if (length(v) < 2L || var(v) == 0) {
+      message("Skipping ", .y$coffee_name, ": not enough variation.")
+    } else {
+      acf(v,
+          main = paste("ACF after second differencing:", .y$coffee_name),
+          na.action = na.pass)
+    }
+  })
+
+```
+
+```{r}
+# weekly coffee type average volumn sold rank
+weekly_coffee_volume %>%
+  group_by(coffee_name) %>%
+  summarise(avg_volume = mean(total_volume, na.rm = TRUE)) %>%
+  arrange(desc(avg_volume)) %>%
+  DT::datatable(caption = "Average Weekly Sales Volume by Coffee Type")
+
+```
+
+#### **Data Description & Exploratory Summary**
+
+-   Dataset Overview
+
+This dataset represents the **total weekly sales volume** (cups sold) for 8 different coffee types from March 2024 to March 2025.
+
+-   EDA Findings
+
+1.  The dataset contains **NA values** for some weeks and coffee types but is otherwise complete.
+
+2.  After first-order differencing, most coffee types became stationary, except for Americano with Milk and Latte, which still showed a trend.
+
+3.  No significant seasonality was detected in the sales volumes after **STL decomposition**.
+
+-   Key Observations
+
+1.  Highest Sales Volume: Americano with Milk peaked in the week of February 16, 2025.
+
+2.  Average Weekly Volume: The average sales volume for all coffee types was around 42 cups per week.
+
+-   Assumptions
+
+1.  Americano with Milk will remain the top-selling coffee over the next 8 weeks, continuing its strong performance observed historically.
+
+2.  Customer preferences may shift across coffee types due to weather.
+
+3.  Growth patterns, if any, will be gradual, not abrupt—no coffee type is expected to suddenly double or halve in volume.
+
+### Ingredient Series
+
+```{r}
+# Weekly Ingredient Usage visualization
+weekly_long %>%
+  filter(metric != "sales_n") %>% 
+  autoplot(value) +
   facet_wrap(~metric, scales = "free_y") +
-  labs(title = "Decomposition of Weekly Ingredient Usage",
-       x = "Week",
-       y = NULL) +
-  theme_minimal()+
+  labs(title = "Weekly Ingredient Usage",
+       y = "Amount Used",
+       x = "") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1),
+        legend.position = "none")
+
+
+```
+
+```{r}
+#STL decomposition
+decomp_recipe <- weekly_long %>%
+  filter(metric != "sales_n") %>%
+  model(
+    STL(value ~ trend(window = 7), robust = TRUE)
+  ) %>%
+  components()
+
+autoplot(decomp_recipe) +
+  facet_wrap(~metric, scales = "free_y") +
+  labs(title = "STL Decomposition of Ingredient Usage") +
+  theme_minimal() +
   theme(legend.position = "none")+
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
 
 ```
 
 ```{r}
-#checking Autocorrelation of each ingredients
-weekly_long %>%                       # your original data-frame  
-  filter(metric != "sales_n") %>%     # keep the same exclusion
-  group_by(metric) %>%                # work metric-by-metric
-  group_walk(~{
-    v <- .x$value
-    v <- v[is.finite(v)]             # drop NA / Inf
+#differencing
+diff_recipe <- weekly_long %>%
+  filter(metric != "sales_n") %>%
+  mutate(diff_value = difference(value))
 
-    if (length(v) < 2L || var(v) == 0) {
-      message("Skipping ", .y$metric, ": not enough finite variation.")
-    } else {
-      acf(v,
-          main = paste("ACF for", .y$metric),
-          na.action = na.pass)        # keeps plotting even if a few NA remain
-    }
-  })
+diff_recipe %>%
+  autoplot(diff_value) +
+  facet_wrap(~metric, scales = "free_y") +
+  labs(title = "First-Order Differenced Ingredient Usage") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))+
+  theme(legend.position = "none")
 
 ```
 
 ```{r}
-#Differencing each ingredients
-weekly_diff <- weekly_long %>%
-  filter(metric != "sales_n") %>%
-  group_by(metric) %>%  
-  arrange(week) %>%  
-  mutate(value_diff = difference(value)) %>%  
-  filter(!is.na(value_diff)) %>%  
-  ungroup()
-
-
-
-#ACF for Differenced Ingredients
-weekly_diff %>%                          # your differenced data frame
-  group_by(metric) %>%                   # handle one metric at a time
-  group_walk(~{
-    v <- .x$value_diff                   # pull the differenced vector
-
-    # 1. keep only finite, non-missing observations
-    v <- v[is.finite(v)]
-
-    # 2. check that we still have at least two values AND some variance
-    if (length(v) < 2L || var(v) == 0) {
-      message("Skipping ", .y$metric,
-              ": not enough finite variation after differencing.")
-    } else {
-      acf(v,
-          lag.max = 30,
-          main = paste("ACF for Differenced", .y$metric),
-          na.action = na.pass)           # ignore any intermittent NA gaps
-    }
-  })
+#ACF 
+diff_recipe %>%
+  filter(!is.na(diff_value)) %>%
+  ACF(diff_value) %>%
+  autoplot() +
+  facet_wrap(~metric, scales = "free_y") +
+  labs(title = "ACF of First-Order Differenced Ingredient Usage") +
+  theme_minimal()
 
 ```
+
+```{r}
+ingredient_summary <- weekly_long %>%
+  filter(metric != "sales_n") %>% 
+  group_by(metric) %>%
+  summarise(
+    avg_weekly_usage = mean(value, na.rm = TRUE),
+    min_weekly_usage = min(value, na.rm = TRUE),
+    max_weekly_usage = max(value, na.rm = TRUE),
+    total_usage = sum(value, na.rm = TRUE),
+    weeks_count = n()
+  ) %>%
+  arrange(desc(avg_weekly_usage))
+
+ingredient_summary
+
+```
+
+#### **Data Description & Exploratory Summary**
+
+-   Dataset Overview
+
+This dataset represents weekly ingredient usage for a coffee vending machines from March 2024 to March 2025, including key ingredients like milk, coffee, chocolate, sugar, and vanilla.
+
+-   EDA Findings
+
+1.  The usage of milk exhibits the highest variation and fluctuation among all ingredients, especially when analyzed via STL decomposition.
+
+2.  Other ingredients, such as coffee and chocolate, show more stationary patterns in their weekly usage.
+
+3.  After first-order differencing, all time series (except milk) become stationary, with ACF plots showing no significant autocorrelation, indicating random fluctuations.
+
+-   Key Observations
+
+1.  As the ingredient with the highest demand, it shows significant volatility.
+
+2.  Coffee shows a slightly fluctuating trend, being the second highest in demand after milk.
+
+-   Assumptions
+
+1.  Given that milk consistently shows the highest demand, it is assumed that milk will continue to be the ingredient with the highest usage in the next 8 weeks.
+
+2.  Ingredients like coffee and chocolate will likely maintain stable usage, though minor fluctuations may occur based on consumer trends or events.
 
 ## Modeling Process
 
@@ -382,5 +674,5 @@ plot_ly(
 
 ```
 
-```{}
+```         
 ```
