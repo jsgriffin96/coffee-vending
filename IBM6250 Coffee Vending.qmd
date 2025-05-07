@@ -98,15 +98,15 @@ unique(machine1$coffee_name)%>%sort()
 
 
 recipes <- tribble(
-  ~coffee_name,            ~coffeeG, ~milkML, ~chocolateG, ~caramelML, ~sugarG, ~vanillaML,
-  "AMERICANO",                18,       0,          0,          0,        0,        0,
-  "AMERICANO WITH MILK",      18,      60,          0,          0,        0,        0,
-  "CAPPUCCINO",               18,     100,          0,          0,        0,        0,
-  "COCOA",                     0,     240,         22,          0,       15,        0,
-  "CORTADO",                  18,      60,          0,          0,        0,        0,
-  "ESPRESSO",                 18,       0,          0,          0,        0,        0,
-  "HOT CHOCOLATE",             0,     240,         30,          0,       20,        0,
-  "LATTE",                    18,     240,          0,          0,        0,       10
+  ~coffee_name,            ~coffeeG, ~milkML, ~chocolateG,  ~sugarG, ~vanillaML,
+  "AMERICANO",                18,       0,          0,         0,        0,
+  "AMERICANO WITH MILK",      18,      60,          0,         0,        0,
+  "CAPPUCCINO",               18,     100,          0,         0,        0,
+  "COCOA",                     0,     240,         22,        15,        0,
+  "CORTADO",                  18,      60,          0,         0,        0,
+  "ESPRESSO",                 18,       0,          0,         0,        0,
+  "HOT CHOCOLATE",             0,     240,         30,        20,        0,
+  "LATTE",                    18,     240,          0,         0,       10
 )
 
 ```
