@@ -1,0 +1,138 @@
+/* coffee-theme.scss */
+
+/*-- scss:defaults --*/
+// Modern creamy‑coffee palette
+$foam: #f8f5f2;       // milk‑foam white
+$cappuccino: #e8d9c4; // extra‑light coffee
+$latte: #d7b89e;      // classic latte
+$macchiato: #b08a6d;  // medium roast
+$coffee-brown: #8b5a3c; // bean accent
+$espresso: #4b2e2b;   // darkest roast
+$highlight: #c67c2c;  // caramel drizzle
+
+// Typography
+$font-heading: 'Montserrat', 'Helvetica', sans-serif;
+$font-body: 'Roboto', 'Arial', sans-serif;
+
+/*-- scss:rules --*/
+// -----------------------------
+// HTML & Reveal.js base styles
+// -----------------------------
+body,
+.reveal {
+  background-color: $foam;
+  color: $espresso;
+  font-family: $font-body;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+
+.reveal .slides {
+  padding: 0 1.5rem;
+}
+
+// -----------------------------
+// Headings
+// -----------------------------
+@mixin heading-style($size, $color: $coffee-brown) {
+  font-family: $font-heading;
+  color: $color;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  font-weight: 700;
+  margin: 0 0 0.5em;
+}
+
+h1, .reveal h1 { @include heading-style(2.25rem); font-size: 2.25rem; }
+h2, .reveal h2 { @include heading-style(1.8rem);  font-size: 1.8rem;  }
+h3, .reveal h3 { @include heading-style(1.4rem);  font-size: 1.4rem;  }
+
+// -----------------------------
+// Links
+// -----------------------------
+a,
+.reveal a {
+  color: $macchiato;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  transition: color 0.2s ease, text-decoration-thickness 0.2s ease;
+
+  &:hover,
+  &:focus {
+    color: $highlight;
+    text-decoration-thickness: 0.2rem;
+  }
+}
+
+// -----------------------------
+// Lists with coffee‑bean bullets
+// -----------------------------
+ul,
+ol,
+.reveal ul,
+.reveal ol {
+  list-style: none;
+  padding-left: 1.5rem;
+  margin-bottom: 1rem;
+
+  li {
+    position: relative;
+    padding-left: 1rem;
+
+    &::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 0.2rem;
+      width: 0.75rem;
+      height: 0.75rem;
+      background-image: url('data:image/svg+xml,%3Csvg%20xmlns%3D%22http://www.w3.org/2000/svg%22%20viewBox%3D%220%200%2032%2032%22%20fill%3D%22%238b5a3c%22%3E%3Cpath%20d%3D%22M16%202C9.4%202%204%208.3%204%2016s5.4%2014%2012%2014%2012-6.3%2012-14S22.6%202%2016%202zm0%202c2.9%200%205.7%201.7%207.4%204.6C18.5%209.4%2014%2013.7%2014%2019.5c0%201.7.3%203.4.9%204.8C11.9%2022.7%2010%2019.7%2010%2016c0-5.5%202.7-10%206-12z%22/%3E%3C/svg%3E');
+      background-size: contain;
+      background-repeat: no-repeat;
+    }
+  }
+}
+
+// -----------------------------
+// Code blocks
+// -----------------------------
+pre,
+code,
+.reveal pre,
+.reveal code {
+  background-color: lighten($espresso, 50%);
+  color: darken($espresso, 5%);
+  padding: 0.2em 0.4em;
+  border-radius: 4px;
+  font-size: 0.9rem;
+}
+
+// -----------------------------
+// Tables
+// -----------------------------
+table,
+.reveal table {
+  margin-bottom: 1.5rem;
+  width: 100%;
+  border-collapse: collapse;
+
+  thead {
+    background-color: $coffee-brown;
+    color: $foam;
+  }
+
+  th,
+  td {
+    padding: 0.5rem;
+    border: 1px solid lighten($espresso, 50%);
+  }
+}
+
+// -----------------------------
+// Reveal.js slide background
+// -----------------------------
+.reveal .slide-background {
+  background-color: $foam;
+}
+
+// No dark‑mode variant — single light theme only

@@ -5,25 +5,27 @@ format:
   html:
     toc: true            
     toc-depth: 3         
-    self-contained: true
+    self-contained: false
+    theme: [theme.scss]
   revealjs:
-    theme: simple             
-    slide-level: 2            
+    theme: [theme.scss]
+    slide-level: 2    
+    scrollable: true
     incremental: true         
-    self-contained: true
-    output-file: IBM6250-Coffee-Vending-revealjs.html
+    self-contained: false
+    output-file: IBM6250 Coffee Vending Presentation.html
 editor: visual
 bibliography: refrences.bib
 editor_options: 
   chunk_output_type: inline
 ---
 
-| Order | Task / Deliverable | Owner | Details |
-|---------------:|------------------------|----------------|----------------|
-| **1** | Input / Intro section | Jarrod | Project overview and report framing |
-| **2** | Exploratory Data Analysis (EDA) | Min | Data cleaning, visualization, descriptive stats |
-| **3** | Modeling | Eunice | Build and validate predictive models |
-| **4** | Forecast | Ceren | Predict overall revenue, drink consumption, and ingredient usage |
+| Order | Task / Deliverable              | Owner  | Details                                                          |
+|----------------:|----------------------|-----------------|-----------------|
+| **1** | Input / Intro section           | Jarrod | Project overview and report framing                              |
+| **2** | Exploratory Data Analysis (EDA) | Min    | Data cleaning, visualization, descriptive stats                  |
+| **3** | Modeling                        | Eunice | Build and validate predictive models                             |
+| **4** | Forecast                        | Ceren  | Predict overall revenue, drink consumption, and ingredient usage |
 
 ## Introduction
 
@@ -31,10 +33,12 @@ Effective inventory control for coffee-vending machines hinges on anticipating w
 
 ### This report:
 
+::: {.incremental}
 1.  Imports & cleans transaction data from two coffee-vending machines.\
 2.  Explores key demand drivers.\
 3.  Models weekly sales with Seasonal ARIMA (plus Prophet as a benchmark).\
 4.  Delivers eight-week forecasts and stocking recommendations.
+:::
 
 ## Data Input and Combining
 
@@ -114,16 +118,16 @@ recipes <- tribble(
 
 ##### Ingredient Logic
 
-| Drink | Ingredient-logic rationale |
-|--------------------|----------------------------------------------------|
-| **Espresso** | Straight double shot: 18 g ground coffee, no additives [@scaEspresso]. |
-| **Americano** | Same 18 g espresso diluted with ≈ 4 × its volume of hot water; nothing else required [@scaEspresso]. |
-| **Americano with Milk** | Americano softened with ≈ 60 ml steamed milk – enough to mellow bitterness without turning it into a latte [@whiteAmericano]. |
-| **Cappuccino** | Classic 1 : 1 : 1 build – espresso, ≈ 60 ml steamed milk, equal micro-foam – fills a 150–180 ml cup [@spruceCappuccino]. |
-| **Cortado** | Spanish “cut” drink: equal parts double espresso and ≈ 60 ml steamed milk [@foodwineCortado]. |
-| **Latte** | U.S. latte stretches the shot with ≈ 240 ml milk (1 : 4–5 ratio); vanilla version adds 10 ml syrup (≈ 2 pumps) [@coffeeBrosLatte; @toraniPump]. |
-| **Cocoa** | Non-coffee mix: 240 ml milk + 22 g cocoa powder + 15 g sugar – standard stovetop proportions [@hersheyCocoa]. |
-| **Hot Chocolate** | Richer café blend: same milk but 30 g cocoa and 20 g sugar for modern sweetness level [@hersheyCocoa]. |
+| Drink                   | Ingredient-logic rationale                                                                                                                      |
+|---------------------|---------------------------------------------------|
+| **Espresso**            | Straight double shot: 18 g ground coffee, no additives [@scaEspresso].                                                                          |
+| **Americano**           | Same 18 g espresso diluted with ≈ 4 × its volume of hot water; nothing else required [@scaEspresso].                                            |
+| **Americano with Milk** | Americano softened with ≈ 60 ml steamed milk – enough to mellow bitterness without turning it into a latte [@whiteAmericano].                   |
+| **Cappuccino**          | Classic 1 : 1 : 1 build – espresso, ≈ 60 ml steamed milk, equal micro-foam – fills a 150–180 ml cup [@spruceCappuccino].                        |
+| **Cortado**             | Spanish “cut” drink: equal parts double espresso and ≈ 60 ml steamed milk [@foodwineCortado].                                                   |
+| **Latte**               | U.S. latte stretches the shot with ≈ 240 ml milk (1 : 4–5 ratio); vanilla version adds 10 ml syrup (≈ 2 pumps) [@coffeeBrosLatte; @toraniPump]. |
+| **Cocoa**               | Non-coffee mix: 240 ml milk + 22 g cocoa powder + 15 g sugar – standard stovetop proportions [@hersheyCocoa].                                   |
+| **Hot Chocolate**       | Richer café blend: same milk but 30 g cocoa and 20 g sugar for modern sweetness level [@hersheyCocoa].                                          |
 
 ### Combining Transaction Data and Recipies
 
