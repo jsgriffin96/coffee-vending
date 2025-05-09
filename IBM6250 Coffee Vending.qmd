@@ -20,14 +20,12 @@ editor_options:
   chunk_output_type: inline
 ---
 
-
-| Order | Task / Deliverable              | Owner  | Details                                                          |
-|----------------:|---------------------|-----------------|-----------------|
-| **1** | Input / Intro section           | Jarrod | Project overview and report framing                              |
-| **2** | Exploratory Data Analysis (EDA) | Min    | Data cleaning, visualization, descriptive stats                  |
-| **3** | Modeling                        | Eunice | Build and validate predictive models                             |
-| **4** | Forecast                        | Ceren  | Predict overall revenue, drink consumption, and ingredient usage |
-
+| Order | Task / Deliverable | Owner | Details |
+|-----------------:|--------------------|------------------|------------------|
+| **1** | Input / Intro section | Jarrod | Project overview and report framing |
+| **2** | Exploratory Data Analysis (EDA) | Min | Data cleaning, visualization, descriptive stats |
+| **3** | Modeling | Eunice | Build and validate predictive models |
+| **4** | Forecast | Ceren | Predict overall revenue, drink consumption, and ingredient usage |
 
 ## Introduction
 
@@ -121,7 +119,7 @@ recipes <- tribble(
 #### Ingredient Logic
 
 | Drink | Ingredient-logic rationale |
-|----------------------|--------------------------------------------------|
+|-----------------------|-------------------------------------------------|
 | **Espresso** | Straight double shot: 18 g ground coffee, no additives [@scaEspresso]. |
 | **Americano** | Same 18 g espresso diluted with ≈ 4 × its volume of hot water; nothing else required [@scaEspresso]. |
 | **Americano with Milk** | Americano softened with ≈ 60 ml steamed milk – enough to mellow bitterness without turning it into a latte [@whiteAmericano]. |
@@ -130,8 +128,6 @@ recipes <- tribble(
 | **Latte** | U.S. latte stretches the shot with ≈ 240 ml milk (1 : 4–5 ratio); vanilla version adds 10 ml syrup (≈ 2 pumps) [@coffeeBrosLatte; @toraniPump]. |
 | **Cocoa** | Non-coffee mix: 240 ml milk + 22 g cocoa powder + 15 g sugar – standard stovetop proportions [@hersheyCocoa]. |
 | **Hot Chocolate** | Richer café blend: same milk but 30 g cocoa and 20 g sugar for modern sweetness level [@hersheyCocoa]. |
-
-                                             
 
 ### Combining Transaction Data and Recipies
 
@@ -384,10 +380,13 @@ missing_data <- weekly_coffee_volume %>%
   group_by(coffee_name) %>%
   summarise(missing_weeks = sum(is.na(total_volume)))
 
+
 #fill gap
 weekly_volume_filled <- weekly_coffee_volume %>%
   fill_gaps(total_volume = 0)
 
+
+#decomposition
 decomposed_volume <- weekly_volume_filled %>%
   model(
     STL(total_volume ~ season(window = 52) + trend(window = 7), robust = TRUE)
@@ -405,26 +404,7 @@ autoplot(decomposed_volume) +
 ```
 
 ```{r}
-
-
-# ACF
-acf_data <- weekly_volume_filled %>%
-  ACF(total_volume)
-
-
-acf_data %>%
-  autoplot() +
-  facet_wrap(~ coffee_name, scales = "free_y") +
-  labs(title = "ACF of Weekly Coffee Volume by Coffee Type",
-       x = "Lag", y = "ACF") +
-  theme_minimal() +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1),
-        legend.position = "none")
-
-```
-
-```{r}
-#Differencing
+#Differencing for all coffee type
 weekly_volume_diff <- weekly_volume_filled %>%
   group_by(coffee_name) %>%
   mutate(diff_volume = difference(total_volume)) %>%
@@ -452,35 +432,6 @@ acf_diff_data %>%
   theme_minimal() +
   theme(axis.text.x = element_text(angle = 45, hjust = 1),
         legend.position = "none")
-
-```
-
-```{r}
-weekly_volume_diff_2 <- weekly_volume_filled %>%
-  group_by(coffee_name) %>%
-  mutate(diff_volume_2 = difference(total_volume, lag = 2)) %>%
-  ungroup()
-
-
-# tsibble
-weekly_volume_diff_2_tsibble <- weekly_volume_diff_2 %>%
-  filter(!is.na(diff_volume_2)) %>%
-  as_tsibble(index = week, key = coffee_name)
-
-#  ACF
-acf_diff2_data <- weekly_volume_diff_2_tsibble %>%
-  ACF(diff_volume_2)
-
-
-acf_diff2_data %>%
-  autoplot() +
-  facet_wrap(~ coffee_name, scales = "free_y") +
-  labs(title = "ACF After Second Differencing (Lag = 2)",
-       x = "Lag", y = "ACF") +
-  theme_minimal() +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1),
-        legend.position = "none")
-
 
 ```
 
@@ -520,7 +471,7 @@ This dataset represents the **weekly sales volume** (cups sold) for 8 different 
 
 1.  The dataset contains **NA values** for some weeks in coffee types but is otherwise complete.
 
-2.  After first-order differencing, most coffee types became stationary, except for Americano with Milk and Latte, which still showed a trend.
+2.  After first-order differencing, most coffee types became stationary, except for Americano with Milk.
 
 3.  No significant seasonality was detected in the sales volumes after **STL decomposition**.
 
