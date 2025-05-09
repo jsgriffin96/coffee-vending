@@ -20,12 +20,12 @@ editor_options:
   chunk_output_type: inline
 ---
 
-| Order | Task / Deliverable              | Owner  | Details                                                          |
-|----------------:|----------------------|-----------------|-----------------|
-| **1** | Input / Intro section           | Jarrod | Project overview and report framing                              |
-| **2** | Exploratory Data Analysis (EDA) | Min    | Data cleaning, visualization, descriptive stats                  |
-| **3** | Modeling                        | Eunice | Build and validate predictive models                             |
-| **4** | Forecast                        | Ceren  | Predict overall revenue, drink consumption, and ingredient usage |
+| Order | Task / Deliverable | Owner | Details |
+|----------------:|---------------------|-----------------|-----------------|
+| **1** | Input / Intro section | Jarrod | Project overview and report framing |
+| **2** | Exploratory Data Analysis (EDA) | Min | Data cleaning, visualization, descriptive stats |
+| **3** | Modeling | Eunice | Build and validate predictive models |
+| **4** | Forecast | Ceren | Predict overall revenue, drink consumption, and ingredient usage |
 
 ## Introduction
 
@@ -33,7 +33,7 @@ Effective inventory control for coffee-vending machines hinges on anticipating w
 
 ### This report:
 
-::: {.incremental}
+::: incremental
 1.  Imports & cleans transaction data from two coffee-vending machines.\
 2.  Explores key demand drivers.\
 3.  Models weekly sales with Seasonal ARIMA (plus Prophet as a benchmark).\
@@ -118,16 +118,16 @@ recipes <- tribble(
 
 ##### Ingredient Logic
 
-| Drink                   | Ingredient-logic rationale                                                                                                                      |
-|---------------------|---------------------------------------------------|
-| **Espresso**            | Straight double shot: 18 g ground coffee, no additives [@scaEspresso].                                                                          |
-| **Americano**           | Same 18 g espresso diluted with ≈ 4 × its volume of hot water; nothing else required [@scaEspresso].                                            |
-| **Americano with Milk** | Americano softened with ≈ 60 ml steamed milk – enough to mellow bitterness without turning it into a latte [@whiteAmericano].                   |
-| **Cappuccino**          | Classic 1 : 1 : 1 build – espresso, ≈ 60 ml steamed milk, equal micro-foam – fills a 150–180 ml cup [@spruceCappuccino].                        |
-| **Cortado**             | Spanish “cut” drink: equal parts double espresso and ≈ 60 ml steamed milk [@foodwineCortado].                                                   |
-| **Latte**               | U.S. latte stretches the shot with ≈ 240 ml milk (1 : 4–5 ratio); vanilla version adds 10 ml syrup (≈ 2 pumps) [@coffeeBrosLatte; @toraniPump]. |
-| **Cocoa**               | Non-coffee mix: 240 ml milk + 22 g cocoa powder + 15 g sugar – standard stovetop proportions [@hersheyCocoa].                                   |
-| **Hot Chocolate**       | Richer café blend: same milk but 30 g cocoa and 20 g sugar for modern sweetness level [@hersheyCocoa].                                          |
+| Drink | Ingredient-logic rationale |
+|----------------------|--------------------------------------------------|
+| **Espresso** | Straight double shot: 18 g ground coffee, no additives [@scaEspresso]. |
+| **Americano** | Same 18 g espresso diluted with ≈ 4 × its volume of hot water; nothing else required [@scaEspresso]. |
+| **Americano with Milk** | Americano softened with ≈ 60 ml steamed milk – enough to mellow bitterness without turning it into a latte [@whiteAmericano]. |
+| **Cappuccino** | Classic 1 : 1 : 1 build – espresso, ≈ 60 ml steamed milk, equal micro-foam – fills a 150–180 ml cup [@spruceCappuccino]. |
+| **Cortado** | Spanish “cut” drink: equal parts double espresso and ≈ 60 ml steamed milk [@foodwineCortado]. |
+| **Latte** | U.S. latte stretches the shot with ≈ 240 ml milk (1 : 4–5 ratio); vanilla version adds 10 ml syrup (≈ 2 pumps) [@coffeeBrosLatte; @toraniPump]. |
+| **Cocoa** | Non-coffee mix: 240 ml milk + 22 g cocoa powder + 15 g sugar – standard stovetop proportions [@hersheyCocoa]. |
+| **Hot Chocolate** | Richer café blend: same milk but 30 g cocoa and 20 g sugar for modern sweetness level [@hersheyCocoa]. |
 
 ### Combining Transaction Data and Recipies
 
@@ -401,21 +401,21 @@ autoplot(decomposed_volume) +
 ```
 
 ```{r}
-#ACF
-weekly_volume_filled %>%
-  group_by(coffee_name) %>%
-  group_walk(~{
-    v <- .x$total_volume
-    v <- v[is.finite(v)]
 
-    if (length(v) < 2L || var(v) == 0) {
-      message("Skipping ", .y$coffee_name, ": not enough variation.")
-    } else {
-      acf(v,
-          main = paste("ACF for", .y$coffee_name),
-          na.action = na.pass)
-    }
-  })
+
+# ACF
+acf_data <- weekly_volume_filled %>%
+  ACF(total_volume)
+
+
+acf_data %>%
+  autoplot() +
+  facet_wrap(~ coffee_name, scales = "free_y") +
+  labs(title = "ACF of Weekly Coffee Volume by Coffee Type",
+       x = "Lag", y = "ACF") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1),
+        legend.position = "none")
 
 ```
 
@@ -429,22 +429,25 @@ weekly_volume_diff <- weekly_volume_filled %>%
 ```
 
 ```{r}
-#check ACF
-weekly_volume_diff %>%
-  filter(!is.na(diff_volume)) %>%
-  group_by(coffee_name) %>%
-  group_walk(~{
-    v <- .x$diff_volume
-    v <- v[is.finite(v)]
 
-    if (length(v) < 2L || var(v) == 0) {
-      message("Skipping ", .y$coffee_name, ": not enough variation.")
-    } else {
-      acf(v,
-          main = paste("ACF after differencing:", .y$coffee_name),
-          na.action = na.pass)
-    }
-  })
+#tsibble：
+weekly_volume_diff_tsibble <- weekly_volume_diff %>%
+  filter(!is.na(diff_volume)) %>%
+  as_tsibble(index = week, key = coffee_name)
+
+# ACF
+acf_diff_data <- weekly_volume_diff_tsibble %>%
+  ACF(diff_volume)
+
+#facet ACF 
+acf_diff_data %>%
+  autoplot() +
+  facet_wrap(~ coffee_name, scales = "free_y") +
+  labs(title = "ACF After Differencing (by Coffee Type)",
+       x = "Lag", y = "ACF") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1),
+        legend.position = "none")
 
 ```
 
@@ -455,21 +458,25 @@ weekly_volume_diff_2 <- weekly_volume_filled %>%
   ungroup()
 
 
-weekly_volume_diff_2 %>%
+# tsibble
+weekly_volume_diff_2_tsibble <- weekly_volume_diff_2 %>%
   filter(!is.na(diff_volume_2)) %>%
-  group_by(coffee_name) %>%
-  group_walk(~{
-    v <- .x$diff_volume_2
-    v <- v[is.finite(v)]
+  as_tsibble(index = week, key = coffee_name)
 
-    if (length(v) < 2L || var(v) == 0) {
-      message("Skipping ", .y$coffee_name, ": not enough variation.")
-    } else {
-      acf(v,
-          main = paste("ACF after second differencing:", .y$coffee_name),
-          na.action = na.pass)
-    }
-  })
+#  ACF
+acf_diff2_data <- weekly_volume_diff_2_tsibble %>%
+  ACF(diff_volume_2)
+
+
+acf_diff2_data %>%
+  autoplot() +
+  facet_wrap(~ coffee_name, scales = "free_y") +
+  labs(title = "ACF After Second Differencing (Lag = 2)",
+       x = "Lag", y = "ACF") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1),
+        legend.position = "none")
+
 
 ```
 
