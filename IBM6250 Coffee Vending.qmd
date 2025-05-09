@@ -19,7 +19,7 @@ editor_options:
 ---
 
 | Order | Task / Deliverable | Owner | Details |
-|-----------:|--------------------------------------|------------|------------|
+|-------------:|-------------------------------|--------------|--------------|
 | **1** | Input / Intro section | Jarrod | Project overview and report framing |
 | **2** | Exploratory Data Analysis (EDA) | Min | Data cleaning, visualization, descriptive stats |
 | **3** | Modeling | Eunice | Build and validate predictive models |
@@ -115,7 +115,7 @@ recipes <- tribble(
 ##### Ingredient Logic
 
 | Drink | Ingredient-logic rationale |
-|-----------------|-------------------------------------------------------|
+|------------------|------------------------------------------------------|
 | **Espresso** | Straight double shot: 18 g ground coffee, no additives [@scaEspresso]. |
 | **Americano** | Same 18 g espresso diluted with ≈ 4 × its volume of hot water; nothing else required [@scaEspresso]. |
 | **Americano with Milk** | Americano softened with ≈ 60 ml steamed milk – enough to mellow bitterness without turning it into a latte [@whiteAmericano]. |
@@ -617,11 +617,113 @@ This dataset represents weekly ingredient usage for a coffee vending machines fr
 2.  Ingredients like coffee and chocolate will likely maintain stable usage, though minor fluctuations may occur based on consumer trends or events.
 
 ## Modeling Process
-We model each weekly ingredient time series using Seasonal ARIMA (SARIMA), selected for its ability to capture both autoregressive and seasonal dynamics that is present in our exploratory data analysis. We want to produce stable 8-week forecasts to inform weekly inventory restocking decisions. Prophet is used as a secondary benchmark model.
+
+We model each weekly ingredient time series using Seasonal ARIMA (SARIMA), selected for its ability to capture both autoregressive and seasonal dynamics that is present in our exploratory data analysis. We want to produce stable 8-week forecasts to inform weekly inventory restocking decisions. Prophet is used as a secondary benchmark model to compare predictive accuracy.
+
+```{r}
+
+# Reshaping to time series per ingredient
+ingredients <- c("coffeeG", "milkML", "chocolateG", "sugarG", "vanillaML")
+
+ingredient_ts <- weekly_sales %>%
+  select(week, coffeeG, milkML, chocolateG, sugarG, vanillaML) %>%
+  pivot_longer(-week, names_to = "ingredient", values_to = "amount") %>%
+  as_tsibble(index = week, key = ingredient)
+
+```
+
+```{r}
+
+# Long format tsibble
+weekly_long_ingredients <- weekly_sales %>%
+  pivot_longer(cols = coffeeG:vanillaML, names_to = "ingredient", values_to = "value") %>%
+  as_tsibble(index = week, key = ingredient)
+
+# Fitting ARIMA to each ingredient using key grouping
+ingredient_models <- weekly_long_ingredients %>%
+  model(ARIMA(value))
+
+```
+
+```{r}
+
+# Fitting Seasonal ARIMA (SARIMA) to each ingredient series
+arima_models <- ingredient_ts %>%
+  model(ARIMA_Model = ARIMA(amount ~ season()))
+
+```
+
+```{r}
+
+#install.packages("prophet")
+library(prophet)
+
+# Converting ARIMA input to Prophet format for each ingredient
+prophet_data <- ingredient_ts %>%
+  as_tibble() %>%
+  rename(ds = week, y = amount) %>%
+  split(.$ingredient)
+
+# Function to fit Prophet and generate 8-week forecast
+fit_prophet <- function(df) {
+  m <- prophet(df[, c("ds", "y")], weekly.seasonality = TRUE, yearly.seasonality = FALSE, daily.seasonality = FALSE)
+  future <- make_future_dataframe(m, periods = 8, freq = "week")
+  forecast <- predict(m, future)
+  forecast$ingredient <- unique(df$ingredient)
+  forecast
+}
+
+# Applying Prophet to all ingredients
+prophet_forecasts <- map_df(prophet_data, fit_prophet)
+
+# Actual + Forecasted values for plotting
+prophet_combined <- ingredient_ts %>%
+  as_tibble() %>%
+  rename(ds = week, y = amount) %>%
+  bind_rows(
+    prophet_forecasts %>%
+      select(ds, yhat, ingredient) %>%
+      rename(y = yhat)
+  )
+
+# Plot Prophet forecasts for all ingredients
+prophet_combined %>%
+  ggplot(aes(x = ds, y = y, color = ingredient)) +
+  geom_line() +
+  facet_wrap(~ingredient, scales = "free_y") +
+  labs(title = "8-Week Prophet Forecasts per Ingredient", x = "Week", y = "Predicted Amount") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+```
+
+To benchmark SARIMA models, we applied Prophet to all five ingredients. Prophet captures trend and seasonality non-parametrically. This is useful in business forecasting where abrupt changes or flexible curves are expected. 8-week forecasts were generated.
 
 ## Model Evaluation and Diagnostics
 
+For each ingredient, we examined residual plots from SARIMA to assess randomness, autocorrelation, and normality.
+
+```{r}
+# Perform Ljung-Box test on SARIMA residuals
+arima_models %>%
+  augment() %>%
+  features(.resid, ljung_box, lag = 8) %>%
+  datatable(caption = "Ljung-Box Test Results for ARIMA Residuals")
+
+```
+
 ## Generate Forecasts
+
+```{r}
+forecast_ingredients <- ingredient_models %>%
+  forecast(h = "8 weeks")
+
+autoplot(forecast_ingredients, weekly_long_ingredients) +
+   labs(title = "8-Week Ingredient Forecasts (Seasonal ARIMA)",
+       y = "Amount", x = "Week") +
+  facet_wrap(~ingredient, scales = "free_y") +
+  theme_minimal()
+
+```
 
 ## Executive Summary with Actionable Recommendations
 
