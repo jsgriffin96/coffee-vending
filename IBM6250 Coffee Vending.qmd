@@ -19,7 +19,7 @@ editor_options:
 ---
 
 | Order | Task / Deliverable | Owner | Details |
-|-------------:|-------------------------------|--------------|--------------|
+|---------------:|------------------------|----------------|----------------|
 | **1** | Input / Intro section | Jarrod | Project overview and report framing |
 | **2** | Exploratory Data Analysis (EDA) | Min | Data cleaning, visualization, descriptive stats |
 | **3** | Modeling | Eunice | Build and validate predictive models |
@@ -115,7 +115,7 @@ recipes <- tribble(
 ##### Ingredient Logic
 
 | Drink | Ingredient-logic rationale |
-|------------------|------------------------------------------------------|
+|--------------------|----------------------------------------------------|
 | **Espresso** | Straight double shot: 18 g ground coffee, no additives [@scaEspresso]. |
 | **Americano** | Same 18 g espresso diluted with ≈ 4 × its volume of hot water; nothing else required [@scaEspresso]. |
 | **Americano with Milk** | Americano softened with ≈ 60 ml steamed milk – enough to mellow bitterness without turning it into a latte [@whiteAmericano]. |
@@ -312,9 +312,7 @@ datatable(summary_stats, caption = "Weekly Revenue Summary Stats")
 
 ```
 
-#### 
-
-**Data Description & Exploratory Summary**
+#### **Data Description & Exploratory Summary**
 
 -   Dataset Overview
 
@@ -472,12 +470,28 @@ weekly_volume_diff_2 %>%
 ```
 
 ```{r}
-# weekly coffee type average volumn sold rank
-weekly_coffee_volume %>%
+
+coffee_summary <- weekly_coffee_volume %>%
   group_by(coffee_name) %>%
-  summarise(avg_volume = mean(total_volume, na.rm = TRUE)) %>%
-  arrange(desc(avg_volume)) %>%
-  DT::datatable(caption = "Average Weekly Sales Volume by Coffee Type")
+  summarise(
+    total_cups = sum(total_volume, na.rm = TRUE),
+    avg_weekly_cups = mean(total_volume, na.rm = TRUE),
+    max_weekly_cups = max(total_volume, na.rm = TRUE),
+    week_of_max_sales = week[which.max(total_volume)],
+    min_weekly_cups = min(total_volume, na.rm = TRUE),
+    week_of_min_sales = week[which.min(total_volume)],
+    .groups = "drop"
+  ) %>%
+  mutate(
+    percent_of_total = total_cups / sum(total_cups) * 100
+  ) %>%
+  arrange(desc(total_cups))  
+
+datatable(coffee_summary,
+          caption = "Coffee Type Weekly Sales Summary",
+          options = list(pageLength = 8, scrollX = TRUE),
+          rownames = FALSE) %>%
+  formatRound(columns = c("avg_weekly_cups", "percent_of_total"), digits = 2)
 
 ```
 
@@ -485,11 +499,11 @@ weekly_coffee_volume %>%
 
 -   Dataset Overview
 
-This dataset represents the **total weekly sales volume** (cups sold) for 8 different coffee types from March 2024 to March 2025.
+This dataset represents the **weekly sales volume** (cups sold) for 8 different coffee types from March 2024 to March 2025.
 
 -   EDA Findings
 
-1.  The dataset contains **NA values** for some weeks and coffee types but is otherwise complete.
+1.  The dataset contains **NA values** for some weeks in coffee types but is otherwise complete.
 
 2.  After first-order differencing, most coffee types became stationary, except for Americano with Milk and Latte, which still showed a trend.
 
@@ -497,13 +511,11 @@ This dataset represents the **total weekly sales volume** (cups sold) for 8 diff
 
 -   Key Observations
 
-1.  Highest Sales Volume: Americano with Milk peaked in the week of February 16, 2025.
-
-2.  Average Weekly Volume: The average sales volume for all coffee types was around 42 cups per week.
+1.  Among the weeks with over 30 cups sold, Americano appeared 5 times, Americano with Milk 2 times, and Latte 2 times.
 
 -   Assumptions
 
-1.  Americano with Milk will remain the top-selling coffee over the next 8 weeks, continuing its strong performance observed historically.
+1.  Americano with milk will remain the top-selling coffee over the next 8 weeks, continuing its strong performance observed historically.
 
 2.  Customer preferences may shift across coffee types due to weather.
 
