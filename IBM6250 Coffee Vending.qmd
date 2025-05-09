@@ -617,6 +617,7 @@ This dataset represents weekly ingredient usage for a coffee vending machines fr
 2.  Ingredients like coffee and chocolate will likely maintain stable usage, though minor fluctuations may occur based on consumer trends or events.
 
 ## Modeling Process
+We model each weekly ingredient time series using Seasonal ARIMA (SARIMA), selected for its ability to capture both autoregressive and seasonal dynamics that is present in our exploratory data analysis. We want to produce stable 8-week forecasts to inform weekly inventory restocking decisions. Prophet is used as a secondary benchmark model.
 
 ## Model Evaluation and Diagnostics
 
