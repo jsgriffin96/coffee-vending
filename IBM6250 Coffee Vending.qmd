@@ -21,7 +21,7 @@ editor_options:
 ---
 
 | Order | Task / Deliverable | Owner | Details |
-|-----------------:|--------------------|------------------|------------------|
+|-----------------:|-------------------|------------------|------------------|
 | **1** | Input / Intro section | Jarrod | Project overview and report framing |
 | **2** | Exploratory Data Analysis (EDA) | Min | Data cleaning, visualization, descriptive stats |
 | **3** | Modeling | Eunice | Build and validate predictive models |
@@ -119,7 +119,7 @@ recipes <- tribble(
 #### Ingredient Logic
 
 | Drink | Ingredient-logic rationale |
-|-----------------------|-------------------------------------------------|
+|-----------------------|------------------------------------------------|
 | **Espresso** | Straight double shot: 18 g ground coffee, no additives [@scaEspresso]. |
 | **Americano** | Same 18 g espresso diluted with ≈ 4 × its volume of hot water; nothing else required [@scaEspresso]. |
 | **Americano with Milk** | Americano softened with ≈ 60 ml steamed milk – enough to mellow bitterness without turning it into a latte [@whiteAmericano]. |
@@ -598,6 +598,8 @@ This dataset represents weekly ingredient usage for a coffee vending machines fr
 
 We model each weekly ingredient time series using Seasonal ARIMA (SARIMA), selected for its ability to capture both autoregressive and seasonal dynamics that is present in our exploratory data analysis. We want to produce stable 8-week forecasts to inform weekly inventory restocking decisions. Prophet is used as a secondary benchmark model to compare predictive accuracy.
 
+### Ingredients Model
+
 ```{r}
 
 # Reshaping to time series per ingredient
@@ -676,6 +678,20 @@ prophet_combined %>%
 
 To benchmark SARIMA models, we applied Prophet to all five ingredients. Prophet captures trend and seasonality non-parametrically. This is useful in business forecasting where abrupt changes or flexible curves are expected. 8-week forecasts were generated.
 
+### Coffee Type Model
+
+```{r}
+coffee_type_models <- weekly_coffee_volume %>%
+  model(ARIMA(total_volume))
+```
+
+### Revenue Model
+
+```{r}
+revenue_models <- weekly_revenue %>%
+  model(ARIMA(total_revenue))
+```
+
 ## Model Evaluation and Diagnostics
 
 For each ingredient, we examined residual plots from SARIMA to assess randomness, autocorrelation, and normality.
@@ -691,6 +707,8 @@ arima_models %>%
 
 ## Generate Forecasts
 
+### Ingredient Forecast
+
 ```{r}
 forecast_ingredients <- ingredient_models %>%
   forecast(h = "8 weeks")
@@ -701,6 +719,31 @@ autoplot(forecast_ingredients, weekly_long_ingredients) +
   facet_wrap(~ingredient, scales = "free_y") +
   theme_minimal()
 
+```
+
+### Coffee Type Forecast
+
+```{r}
+forecast_coffee_type <- coffee_type_models %>%
+  forecast(h = "8 weeks")
+
+autoplot(forecast_coffee_type, weekly_coffee_volume) +
+   labs(title = "8-Week Coffee Type Forecasts (Seasonal ARIMA)",
+       y = "Amount", x = "Week") +
+  facet_wrap(~coffee_name, scales = "free_y") +
+  theme_minimal()
+```
+
+### Revenue Forecast
+
+```{r}
+forecast_revenue <- revenue_models %>%
+  forecast(h = "8 weeks")
+
+autoplot(forecast_revenue, weekly_revenue) +
+   labs(title = "8-Week Revenue Forecasts (Seasonal ARIMA)",
+       y = "USD", x = "Week") +
+  theme_minimal()
 ```
 
 ## Executive Summary with Actionable Recommendations
