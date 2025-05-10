@@ -681,7 +681,7 @@ To benchmark SARIMA models, we applied Prophet to all five ingredients. Prophet 
 ### Coffee Type Model
 
 ```{r}
-coffee_type_models <- weekly_coffee_volume %>%
+coffee_type_models <- weekly_volume_diff %>%
   model(ARIMA(total_volume))
 ```
 
@@ -732,6 +732,10 @@ autoplot(forecast_coffee_type, weekly_coffee_volume) +
        y = "Amount", x = "Week") +
   facet_wrap(~coffee_name, scales = "free_y") +
   theme_minimal()
+```
+
+```{r}
+
 ```
 
 ### Revenue Forecast
