@@ -19,12 +19,12 @@ editor_options:
   chunk_output_type: inline
 ---
 
-| Order | Task / Deliverable              | Owner  | Details                                                          |
+| Order | Task / Deliverable | Owner | Details |
 |-----------------:|-------------------|------------------|------------------|
-| **1** | Input / Intro section           | Jarrod | Project overview and report framing                              |
-| **2** | Exploratory Data Analysis (EDA) | Min    | Data cleaning, visualization, descriptive stats                  |
-| **3** | Modeling                        | Eunice | Build and validate predictive models                             |
-| **4** | Forecast                        | Ceren  | Predict overall revenue, drink consumption, and ingredient usage |
+| **1** | Input / Intro section | Jarrod | Project overview and report framing |
+| **2** | Exploratory Data Analysis (EDA) | Min | Data cleaning, visualization, descriptive stats |
+| **3** | Modeling | Eunice | Build and validate predictive models |
+| **4** | Forecast | Ceren | Predict overall revenue, drink consumption, and ingredient usage |
 
 ## Introduction
 
@@ -117,16 +117,16 @@ recipes <- tribble(
 
 #### Ingredient Logic
 
-| Drink                   | Ingredient-logic rationale                                                                                                                      |
-|------------------------|------------------------------------------------|
-| **Espresso**            | Straight double shot: 18 g ground coffee, no additives [@scaEspresso].                                                                          |
-| **Americano**           | Same 18 g espresso diluted with ≈ 4 × its volume of hot water; nothing else required [@scaEspresso].                                            |
-| **Americano with Milk** | Americano softened with ≈ 60 ml steamed milk – enough to mellow bitterness without turning it into a latte [@whiteAmericano].                   |
-| **Cappuccino**          | Classic 1 : 1 : 1 build – espresso, ≈ 60 ml steamed milk, equal micro-foam – fills a 150–180 ml cup [@spruceCappuccino].                        |
-| **Cortado**             | Spanish “cut” drink: equal parts double espresso and ≈ 60 ml steamed milk [@foodwineCortado].                                                   |
-| **Latte**               | U.S. latte stretches the shot with ≈ 240 ml milk (1 : 4–5 ratio); vanilla version adds 10 ml syrup (≈ 2 pumps) [@coffeeBrosLatte; @toraniPump]. |
-| **Cocoa**               | Non-coffee mix: 240 ml milk + 22 g cocoa powder + 15 g sugar – standard stovetop proportions [@hersheyCocoa].                                   |
-| **Hot Chocolate**       | Richer café blend: same milk but 30 g cocoa and 20 g sugar for modern sweetness level [@hersheyCocoa].                                          |
+| Drink | Ingredient-logic rationale |
+|------------------------|-----------------------------------------------|
+| **Espresso** | Straight double shot: 18 g ground coffee, no additives [@scaEspresso]. |
+| **Americano** | Same 18 g espresso diluted with ≈ 4 × its volume of hot water; nothing else required [@scaEspresso]. |
+| **Americano with Milk** | Americano softened with ≈ 60 ml steamed milk – enough to mellow bitterness without turning it into a latte [@whiteAmericano]. |
+| **Cappuccino** | Classic 1 : 1 : 1 build – espresso, ≈ 60 ml steamed milk, equal micro-foam – fills a 150–180 ml cup [@spruceCappuccino]. |
+| **Cortado** | Spanish “cut” drink: equal parts double espresso and ≈ 60 ml steamed milk [@foodwineCortado]. |
+| **Latte** | U.S. latte stretches the shot with ≈ 240 ml milk (1 : 4–5 ratio); vanilla version adds 10 ml syrup (≈ 2 pumps) [@coffeeBrosLatte; @toraniPump]. |
+| **Cocoa** | Non-coffee mix: 240 ml milk + 22 g cocoa powder + 15 g sugar – standard stovetop proportions [@hersheyCocoa]. |
+| **Hot Chocolate** | Richer café blend: same milk but 30 g cocoa and 20 g sugar for modern sweetness level [@hersheyCocoa]. |
 
 ### Combining Transaction Data and Recipies
 
@@ -678,16 +678,32 @@ To benchmark SARIMA models, we applied Prophet to all five ingredients. Prophet 
 
 ### Coffee Type Model
 
+Having made most of our weekly coffee sales data set stationary after differencing once, we use ARIMA to create our model.
+
 ```{r}
-coffee_type_models <- weekly_volume_diff %>%
-  model(ARIMA(total_volume))
+coffee_type_models_diff <- weekly_volume_diff %>%
+  model(ARIMA(diff_volume))
+```
+
+We difference "Americano with Milk" coffee type a second time as differencing it once did not fix autocorrelation.
+
+```{r}
+americano_milk_diff <- weekly_volume_diff %>%
+  filter(coffee_name == "AMERICANO WITH MILK") %>%
+  mutate(diff_volume = difference(total_volume, differences = 2))
+
+americano_milk_models_diff <- americano_milk_diff %>%
+  model(ARIMA(diff_volume))
+
 ```
 
 ### Revenue Model
 
+Due to the significant trend with increasing variance, we use ETS to train the revenue model. This model does not require differencing.
+
 ```{r}
 revenue_models <- weekly_revenue %>%
-  model(ARIMA(total_revenue))
+  model(ETS(total_revenue))
 ```
 
 ## Model Evaluation and Diagnostics
@@ -722,18 +738,28 @@ autoplot(forecast_ingredients, weekly_long_ingredients) +
 ### Coffee Type Forecast
 
 ```{r}
-forecast_coffee_type <- coffee_type_models %>%
+forecast_coffee_type <- coffee_type_models_diff %>%
   forecast(h = "8 weeks")
 
-autoplot(forecast_coffee_type, weekly_coffee_volume) +
-   labs(title = "8-Week Coffee Type Forecasts (Seasonal ARIMA)",
+autoplot(forecast_coffee_type, weekly_volume_diff) +
+   labs(title = "8-Week Coffee Type Forecasts (ARIMA)",
        y = "Amount", x = "Week") +
   facet_wrap(~coffee_name, scales = "free_y") +
   theme_minimal()
 ```
 
+#### AMERICANO WITH MILK 
+
 ```{r}
 
+forecast_americano_milk <- americano_milk_models_diff %>%
+  forecast(h = "8 weeks")
+
+autoplot(forecast_americano_milk, americano_milk_diff) +
+   labs(title = "8-Week Americano With Milk Forecast (ARIMA)",
+       y = "Amount", x = "Week") +
+  facet_wrap(~coffee_name, scales = "free_y") +
+  theme_minimal()
 ```
 
 ### Revenue Forecast
@@ -743,7 +769,7 @@ forecast_revenue <- revenue_models %>%
   forecast(h = "8 weeks")
 
 autoplot(forecast_revenue, weekly_revenue) +
-   labs(title = "8-Week Revenue Forecasts (Seasonal ARIMA)",
+   labs(title = "8-Week Revenue Forecast (ETS)",
        y = "USD", x = "Week") +
   theme_minimal()
 ```
@@ -799,4 +825,3 @@ plot_ly(
   )
 
 ```
-
