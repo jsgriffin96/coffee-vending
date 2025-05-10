@@ -118,7 +118,7 @@ recipes <- tribble(
 #### Ingredient Logic
 
 | Drink | Ingredient-logic rationale |
-|------------------------|-----------------------------------------------|
+|-------------------------|----------------------------------------------|
 | **Espresso** | Straight double shot: 18 g ground coffee, no additives [@scaEspresso]. |
 | **Americano** | Same 18 g espresso diluted with ≈ 4 × its volume of hot water; nothing else required [@scaEspresso]. |
 | **Americano with Milk** | Americano softened with ≈ 60 ml steamed milk – enough to mellow bitterness without turning it into a latte [@whiteAmericano]. |
@@ -676,11 +676,28 @@ prophet_combined %>%
 
 To benchmark SARIMA models, we applied Prophet to all five ingredients. Prophet captures trend and seasonality non-parametrically. This is useful in business forecasting where abrupt changes or flexible curves are expected. 8-week forecasts were generated.
 
+#### Model Evaluation and Diagnostics
+
+For each ingredient, we examined residual plots from SARIMA to assess randomness, autocorrelation, and normality.
+
+```{r}
+# Perform Ljung-Box test on SARIMA residuals
+arima_models %>%
+  augment() %>%
+  features(.resid, ljung_box, lag = 8) %>%
+  datatable(caption = "Ljung-Box Test Results for ARIMA Residuals")
+
+```
+
 ### Coffee Type Model
 
-Having made most of our weekly coffee sales data set stationary after differencing once, we use ARIMA to create our model.
+We may forecast coffee sales in two different ways: The unit sales forecast and change in unit sales forecast.
 
 As the week of March 23 is incomplete and therefore, causes a sharp drop in revenue, we will be excluding that week from our models.
+
+#### With differencing (Model forecasting change)
+
+Having made most of our weekly coffee sales data set stationary after differencing once, we use ARIMA to create our model.
 
 ```{r}
 #model with differencing
@@ -688,14 +705,6 @@ coffee_type_models_diff <- weekly_volume_diff %>%
   filter(coffee_name != "AMERICANO WITH MILK",
          week != "2025-03-23") %>%
   model(ARIMA(diff_volume))
-```
-
-```{r}
-#model without differencing
-
-coffee_type_models <- weekly_volume_diff %>%
-  filter(week != "2025-03-23") %>%
-  model(ARIMA(total_volume))
 ```
 
 We difference "Americano with Milk" coffee type a second time as differencing it once did not fix autocorrelation.
@@ -711,6 +720,16 @@ americano_milk_models_diff <- americano_milk_diff %>%
 
 ```
 
+#### No differencing (Model forecasting unit sales)
+
+```{r}
+#model without differencing
+
+coffee_type_models <- weekly_volume_diff %>%
+  filter(week != "2025-03-23") %>%
+  model(ARIMA(total_volume))
+```
+
 ### Revenue Model
 
 Due to the significant trend with increasing variance, we use ETS to train the revenue model. This model does not require differencing.
@@ -721,19 +740,6 @@ As the week of March 23 is incomplete and therefore, causes a sharp drop in reve
 revenue_models <- weekly_revenue %>%
   filter(week != "2025-03-23")  %>%
   model(ETS(total_revenue))
-```
-
-## Model Evaluation and Diagnostics
-
-For each ingredient, we examined residual plots from SARIMA to assess randomness, autocorrelation, and normality.
-
-```{r}
-# Perform Ljung-Box test on SARIMA residuals
-arima_models %>%
-  augment() %>%
-  features(.resid, ljung_box, lag = 8) %>%
-  datatable(caption = "Ljung-Box Test Results for ARIMA Residuals")
-
 ```
 
 ## Generate Forecasts
@@ -754,6 +760,10 @@ autoplot(forecast_ingredients, weekly_long_ingredients) +
 
 ### Coffee Type Forecast
 
+#### With differencing (Model forecasting change)
+
+When forecasting differenced time series, we predict w much sales will change over time, not sales themselves. For most coffee types the ARIMA model expects those changes to average around zero.
+
 ```{r}
 forecast_coffee_type_diff <- coffee_type_models_diff %>%
   forecast(h = "8 weeks")
@@ -766,19 +776,9 @@ autoplot(forecast_coffee_type_diff, weekly_volume_diff) +
   theme_minimal()
 ```
 
-```{r}
-forecast_coffee_type <- coffee_type_models %>%
-  forecast(h = "8 weeks")
-
-autoplot(forecast_coffee_type, weekly_volume_diff) +
-   labs(title = "8-Week Coffee Type Forecasts (ARIMA)",
-        subtitle = "No Differencing",
-       y = "Amount", x = "Week") +
-  facet_wrap(~coffee_name, scales = "free_y") +
-  theme_minimal()
-```
-
 #### Americano with Milk - Forecast (2 Difference)
+
+To remove autocorrelation, "americano with milk" coffee type was differenced twice. The ARIMA model predicts changes around zero, albeit with more fluctuation compared to other coffee types.
 
 ```{r}
 
@@ -788,6 +788,24 @@ forecast_americano_milk <- americano_milk_models_diff %>%
 autoplot(forecast_americano_milk, americano_milk_diff) +
    labs(title = "8-Week Americano With Milk Forecast (ARIMA)",
         subtitle = "2 Difference",
+       y = "Amount", x = "Week") +
+  facet_wrap(~coffee_name, scales = "free_y") +
+  theme_minimal()
+```
+
+#### No differencing (Model forecasting unit sales)
+
+Forecasting without differencing manually lets ARIMA do the differecning automatically and then revert the forecast back to the original scale, allowing us to forecast unit sales over time.
+
+As the differenced ARIMA model suggests, the sales are expected to be relatively stable for most coffee types over the next 8 weeks. Cortado, latte and hot chocolate may see some decrease in sales. We should plan to decrease supply for those.
+
+```{r}
+forecast_coffee_type <- coffee_type_models %>%
+  forecast(h = "8 weeks")
+
+autoplot(forecast_coffee_type, weekly_volume_diff) +
+   labs(title = "8-Week Coffee Type Forecasts (ARIMA)",
+        subtitle = "No Differencing",
        y = "Amount", x = "Week") +
   facet_wrap(~coffee_name, scales = "free_y") +
   theme_minimal()
