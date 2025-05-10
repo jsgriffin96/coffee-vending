@@ -680,16 +680,30 @@ To benchmark SARIMA models, we applied Prophet to all five ingredients. Prophet 
 
 Having made most of our weekly coffee sales data set stationary after differencing once, we use ARIMA to create our model.
 
+As the week of March 23 is incomplete and therefore, causes a sharp drop in revenue, we will be excluding that week from our models.
+
 ```{r}
+#model with differencing
 coffee_type_models_diff <- weekly_volume_diff %>%
+  filter(coffee_name != "AMERICANO WITH MILK",
+         week != "2025-03-23") %>%
   model(ARIMA(diff_volume))
+```
+
+```{r}
+#model without differencing
+
+coffee_type_models <- weekly_volume_diff %>%
+  filter(week != "2025-03-23") %>%
+  model(ARIMA(total_volume))
 ```
 
 We difference "Americano with Milk" coffee type a second time as differencing it once did not fix autocorrelation.
 
 ```{r}
 americano_milk_diff <- weekly_volume_diff %>%
-  filter(coffee_name == "AMERICANO WITH MILK") %>%
+  filter(coffee_name == "AMERICANO WITH MILK",
+         week != "2025-03-23") %>%
   mutate(diff_volume = difference(total_volume, differences = 2))
 
 americano_milk_models_diff <- americano_milk_diff %>%
@@ -701,8 +715,11 @@ americano_milk_models_diff <- americano_milk_diff %>%
 
 Due to the significant trend with increasing variance, we use ETS to train the revenue model. This model does not require differencing.
 
+As the week of March 23 is incomplete and therefore, causes a sharp drop in revenue, we will be excluding that week from our model.
+
 ```{r}
 revenue_models <- weekly_revenue %>%
+  filter(week != "2025-03-23")  %>%
   model(ETS(total_revenue))
 ```
 
@@ -738,17 +755,30 @@ autoplot(forecast_ingredients, weekly_long_ingredients) +
 ### Coffee Type Forecast
 
 ```{r}
-forecast_coffee_type <- coffee_type_models_diff %>%
+forecast_coffee_type_diff <- coffee_type_models_diff %>%
   forecast(h = "8 weeks")
 
-autoplot(forecast_coffee_type, weekly_volume_diff) +
+autoplot(forecast_coffee_type_diff, weekly_volume_diff) +
    labs(title = "8-Week Coffee Type Forecasts (ARIMA)",
+        subtitle = "1 Difference",
        y = "Amount", x = "Week") +
   facet_wrap(~coffee_name, scales = "free_y") +
   theme_minimal()
 ```
 
-#### AMERICANO WITH MILK 
+```{r}
+forecast_coffee_type <- coffee_type_models %>%
+  forecast(h = "8 weeks")
+
+autoplot(forecast_coffee_type, weekly_volume_diff) +
+   labs(title = "8-Week Coffee Type Forecasts (ARIMA)",
+        subtitle = "No Differencing",
+       y = "Amount", x = "Week") +
+  facet_wrap(~coffee_name, scales = "free_y") +
+  theme_minimal()
+```
+
+#### Americano with Milk - Forecast (2 Difference)
 
 ```{r}
 
@@ -757,12 +787,17 @@ forecast_americano_milk <- americano_milk_models_diff %>%
 
 autoplot(forecast_americano_milk, americano_milk_diff) +
    labs(title = "8-Week Americano With Milk Forecast (ARIMA)",
+        subtitle = "2 Difference",
        y = "Amount", x = "Week") +
   facet_wrap(~coffee_name, scales = "free_y") +
   theme_minimal()
 ```
 
 ### Revenue Forecast
+
+Given ETS, places more significance onto recent values, the forecasts predicts the revenue will be stable over the next 8 weeks.
+
+Since the week of March 23 was incomplete, it was excluded from model training. As a result, while the current data (black line) show the weekly revenue around \$300, the model predicts it will rise to \$3000 by the end of the week based on the previous period.
 
 ```{r}
 forecast_revenue <- revenue_models %>%
