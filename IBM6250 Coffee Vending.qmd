@@ -393,6 +393,9 @@ weekly_volume_filled%>%
        x = "Week of Year", y = "Total Volume") +
   theme_minimal()
 
+```
+
+```{r}
 #decomposition
 decomposed_volume <- weekly_volume_filled %>%
   model(
@@ -407,7 +410,6 @@ autoplot(decomposed_volume) +
   theme_minimal() +
   theme(axis.text.x = element_text(angle = 45, hjust = 1),
         legend.position = "none")
-
 ```
 
 ```{r}
