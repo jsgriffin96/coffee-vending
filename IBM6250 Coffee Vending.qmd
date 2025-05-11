@@ -19,23 +19,23 @@ editor_options:
   chunk_output_type: inline
 ---
 
-+----------------+-------------------------------------------------------------------------+----------------+--------------------------------------------------------------------------+
-| Order          | Task / Deliverable                                                      | Owner          | Details                                                                  |
-+===============:+=========================================================================+================+==========================================================================+
-| **1**          | Input / Intro section                                                   | Jarrod         | Project overview and report framing                                      |
-+----------------+-------------------------------------------------------------------------+----------------+--------------------------------------------------------------------------+
-| **2**          | Exploratory Data Analysis (EDA)                                         | Min            | Data cleaning, visualization, descriptive stats                          |
-+----------------+-------------------------------------------------------------------------+----------------+--------------------------------------------------------------------------+
-| **3**          | Modeling & Forecast / Executive Summary with Actionable Recommendations | Eunice         | Build and validate predictive models (Ingredients Model)                 |
-|                |                                                                         |                |                                                                          |
-|                |                                                                         |                | Predict ingredient usage                                                 |
-|                |                                                                         |                |                                                                          |
-|                |                                                                         |                | Summary, actionable recommendations, and conclusion                      |
-+----------------+-------------------------------------------------------------------------+----------------+--------------------------------------------------------------------------+
-| **4**          | Modeling & Forecast                                                     | Ceren          | Build and validate predictive models (Coffee Type Model & Revenue Model) |
-|                |                                                                         |                |                                                                          |
-|                |                                                                         |                | Predict overall revenue & drink consumption                              |
-+----------------+-------------------------------------------------------------------------+----------------+--------------------------------------------------------------------------+
++-----------+-------------------------------------------------------------------------+-----------+--------------------------------------------------------------------------+
+| Order     | Task / Deliverable                                                      | Owner     | Details                                                                  |
++==========:+=========================================================================+===========+==========================================================================+
+| **1**     | Input / Intro section                                                   | Jarrod    | Project overview and report framing                                      |
++-----------+-------------------------------------------------------------------------+-----------+--------------------------------------------------------------------------+
+| **2**     | Exploratory Data Analysis (EDA)                                         | Min       | Data cleaning, visualization, descriptive stats                          |
++-----------+-------------------------------------------------------------------------+-----------+--------------------------------------------------------------------------+
+| **3**     | Modeling & Forecast / Executive Summary with Actionable Recommendations | Eunice    | Build and validate predictive models (Ingredients Model)                 |
+|           |                                                                         |           |                                                                          |
+|           |                                                                         |           | Predict ingredient usage                                                 |
+|           |                                                                         |           |                                                                          |
+|           |                                                                         |           | Summary, actionable recommendations, and conclusion                      |
++-----------+-------------------------------------------------------------------------+-----------+--------------------------------------------------------------------------+
+| **4**     | Modeling & Forecast                                                     | Ceren     | Build and validate predictive models (Coffee Type Model & Revenue Model) |
+|           |                                                                         |           |                                                                          |
+|           |                                                                         |           | Predict overall revenue & drink consumption                              |
++-----------+-------------------------------------------------------------------------+-----------+--------------------------------------------------------------------------+
 
 ## Introduction
 
@@ -342,29 +342,11 @@ This dataset is derived from the raw sales table and represents the total weekly
 
 -   EDA Findings
 
-1.  The weekly time series is complete, with no missing weeks.
-
-2.  The revenue shows a distinct trend composed of three major peaks—a pattern resembling “three hills”.
-
-3.  STL decomposition confirmed a clear trend but no significant seasonality was detected.
-
-4.  After first-order differencing, the series became stationary, with the ACF showing white noise.
-
--   Key Observations
-
-1.  Highest revenue: Week of October 6, 2024 — \$3,546
-
-2.  Lowest revenue: Week of March 23, 2025 — \$204.76
-
-3.  The fluctuation pattern suggests possible external drivers (e.g., promotions or demand cycles).
+The weekly revenue time series is complete with no missing weeks. The revenue exhibits a distinct trend, characterized by three major peaks, resembling a "three hills" pattern. STL decomposition confirmed a clear trend but did not detect significant seasonality. After first-order differencing, the series became stationary, with the ACF indicating white noise. The highest revenue occurred in the week of October 6, 2024, amounting to \$3,546, while the lowest revenue was recorded in the week of March 23, 2025, at \$204.76. The observed fluctuation pattern suggests that external drivers, such as promotions or demand cycles, may play a role.
 
 -   Assumptions
 
-1.  Revenue can be modeled primarily as a trend-driven process.
-
-2.  The data-generating process in the next 8 weeks will be similar to the recent 8 weeks.
-
-3.  Weekly sales will grow in the next week.
+Revenue can be modeled primarily as a trend-driven process, with the data-generating process in the next 8 weeks expected to mirror that of the recent 8 weeks. Weekly sales are projected to grow in the upcoming week, continuing the observed trend.
 
 ### Coffee Type Series
 
@@ -403,6 +385,13 @@ missing_data <- weekly_coffee_volume %>%
 weekly_volume_filled <- weekly_coffee_volume %>%
   fill_gaps(total_volume = 0)
 
+#gg_season
+weekly_volume_filled%>%
+  gg_season(total_volume) +
+  facet_wrap(~ coffee_name, scales = "free_y") +
+  labs(title = "Seasonal Plot of Weekly Coffee Volume",
+       x = "Week of Year", y = "Total Volume") +
+  theme_minimal()
 
 #decomposition
 decomposed_volume <- weekly_volume_filled %>%
@@ -487,23 +476,11 @@ This dataset represents the **weekly sales volume** (cups sold) for 8 different 
 
 -   EDA Findings
 
-1.  The dataset contains **NA values** for some weeks in coffee types but is otherwise complete.
-
-2.  After first-order differencing, most coffee types became stationary, except for Americano with Milk.
-
-3.  No significant seasonality was detected in the sales volumes after **STL decomposition**.
-
--   Key Observations
-
-1.  Among the weeks with over 30 cups sold, Americano appeared 5 times, Americano with Milk 2 times, and Latte 2 times.
+The dataset is mostly complete, with only a few missing values for certain coffee types in specific weeks. Among the weeks with over 30 cups sold, Americano appeared 5 times, Americano with Milk 2 times, and Latte 2 times. While gg_season() plots suggest that each coffee type exhibits weak seasonal patterns, the short time span of the data (approximately one year) was not enough for STL decomposition to confidently detect seasonality.
 
 -   Assumptions
 
-1.  Americano with milk will remain the top-selling coffee over the next 8 weeks, continuing its strong performance observed historically.
-
-2.  Customer preferences may shift across coffee types due to weather.
-
-3.  Growth patterns, if any, will be gradual, not abrupt—no coffee type is expected to suddenly double or halve in volume.
+Americano with Milk is expected to remain the top-selling coffee over the next 8 weeks, continuing its strong performance observed historically. However, customer preferences may shift across coffee types due to changes in weather. Any growth patterns are likely to be gradual rather than abrupt, with no coffee type expected to suddenly double or halve in volume.
 
 ### Ingredient Series
 
@@ -538,6 +515,16 @@ autoplot(decomp_recipe) +
   theme_minimal() +
   theme(legend.position = "none")+
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+```
+
+```{r}
+#  gg_season to check seasonal pattern
+gg_season(weekly_long, value) +
+  facet_wrap(~ metric, scales = "free_y") +
+  labs(title = "Seasonal Plot by Ingredient",
+       x = "Week within Year", y = "Value") +
+  theme_minimal()
 
 ```
 
@@ -594,23 +581,11 @@ This dataset represents weekly ingredient usage for a coffee vending machines fr
 
 -   EDA Findings
 
-1.  The usage of milk exhibits the highest variation and fluctuation among all ingredients, especially when analyzed via STL decomposition.
-
-2.  Other ingredients, such as coffee and chocolate, show more stationary patterns in their weekly usage.
-
-3.  After first-order differencing, all time series (except milk) become stationary, with ACF plots showing no significant autocorrelation, indicating random fluctuations.
-
--   Key Observations
-
-1.  As the ingredient with the highest demand, it shows significant volatility.
-
-2.  Coffee shows a slightly fluctuating trend, being the second highest in demand after milk.
+Among all ingredients, milk usage exhibits the highest variation and fluctuation, particularly evident in the STL decomposition. As the ingredient with the highest demand, milk also demonstrates significant volatility in its weekly usage. In contrast, other ingredients like coffee and chocolate show more stable, stationary patterns, with coffee being the second most demanded ingredient, displaying only slight fluctuations over time. Although the STL decomposition did not reveal clear seasonal components, the gg_season() plots suggest that some ingredients may have weak seasonal patterns. This discrepancy arises because STL decomposition typically requires at least two full seasonal cycles to robustly detect seasonality, while our dataset spans only around one year. Therefore, while statistical methods may not identify strong seasonal trends, visual tools like gg_season() remain valuable for uncovering subtle, recurring usage patterns across weeks of the year.
 
 -   Assumptions
 
-1.  Given that milk consistently shows the highest demand, it is assumed that milk will continue to be the ingredient with the highest usage in the next 8 weeks.
-
-2.  Ingredients like coffee and chocolate will likely maintain stable usage, though minor fluctuations may occur based on consumer trends or events.
+Given that milk consistently demonstrates the highest demand, it is reasonable to expect that it will remain the most used ingredient over the next 8 weeks. Meanwhile, ingredients such as coffee and chocolate are likely to maintain stable usage patterns, with only minor fluctuations potentially arising from consumer trends or specific events.
 
 ## Modeling Process
 
