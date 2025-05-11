@@ -19,12 +19,23 @@ editor_options:
   chunk_output_type: inline
 ---
 
-| Order | Task / Deliverable | Owner | Details |
-|-----------------:|-------------------|------------------|------------------|
-| **1** | Input / Intro section | Jarrod | Project overview and report framing |
-| **2** | Exploratory Data Analysis (EDA) | Min | Data cleaning, visualization, descriptive stats |
-| **3** | Modeling | Eunice | Build and validate predictive models |
-| **4** | Forecast | Ceren | Predict overall revenue, drink consumption, and ingredient usage |
++----------------+-------------------------------------------------------------------------+----------------+--------------------------------------------------------------------------+
+| Order          | Task / Deliverable                                                      | Owner          | Details                                                                  |
++===============:+=========================================================================+================+==========================================================================+
+| **1**          | Input / Intro section                                                   | Jarrod         | Project overview and report framing                                      |
++----------------+-------------------------------------------------------------------------+----------------+--------------------------------------------------------------------------+
+| **2**          | Exploratory Data Analysis (EDA)                                         | Min            | Data cleaning, visualization, descriptive stats                          |
++----------------+-------------------------------------------------------------------------+----------------+--------------------------------------------------------------------------+
+| **3**          | Modeling & Forecast / Executive Summary with Actionable Recommendations | Eunice         | Build and validate predictive models (Ingredients Model)                 |
+|                |                                                                         |                |                                                                          |
+|                |                                                                         |                | Predict ingredient usage                                                 |
+|                |                                                                         |                |                                                                          |
+|                |                                                                         |                | Summary, actionable recommendations, and conclusion                      |
++----------------+-------------------------------------------------------------------------+----------------+--------------------------------------------------------------------------+
+| **4**          | Modeling & Forecast                                                     | Ceren          | Build and validate predictive models (Coffee Type Model & Revenue Model) |
+|                |                                                                         |                |                                                                          |
+|                |                                                                         |                | Predict overall revenue & drink consumption                              |
++----------------+-------------------------------------------------------------------------+----------------+--------------------------------------------------------------------------+
 
 ## Introduction
 
@@ -35,7 +46,7 @@ Effective inventory control for coffee-vending machines hinges on anticipating w
 ::: incremental
 1.  Imports & cleans transaction data from two coffee-vending machines.\
 2.  Explores key demand drivers.\
-3.  Models weekly sales with Seasonal ARIMA (plus Prophet as a benchmark).\
+3.  Models weekly sales with Seasonal ARIMA.\
 4.  Delivers eight-week forecasts and stocking recommendations.
 :::
 
@@ -117,16 +128,25 @@ recipes <- tribble(
 
 #### Ingredient Logic
 
-| Drink | Ingredient-logic rationale |
-|-------------------------|----------------------------------------------|
-| **Espresso** | Straight double shot: 18 g ground coffee, no additives [@scaEspresso]. |
-| **Americano** | Same 18 g espresso diluted with ≈ 4 × its volume of hot water; nothing else required [@scaEspresso]. |
-| **Americano with Milk** | Americano softened with ≈ 60 ml steamed milk – enough to mellow bitterness without turning it into a latte [@whiteAmericano]. |
-| **Cappuccino** | Classic 1 : 1 : 1 build – espresso, ≈ 60 ml steamed milk, equal micro-foam – fills a 150–180 ml cup [@spruceCappuccino]. |
-| **Cortado** | Spanish “cut” drink: equal parts double espresso and ≈ 60 ml steamed milk [@foodwineCortado]. |
-| **Latte** | U.S. latte stretches the shot with ≈ 240 ml milk (1 : 4–5 ratio); vanilla version adds 10 ml syrup (≈ 2 pumps) [@coffeeBrosLatte; @toraniPump]. |
-| **Cocoa** | Non-coffee mix: 240 ml milk + 22 g cocoa powder + 15 g sugar – standard stovetop proportions [@hersheyCocoa]. |
-| **Hot Chocolate** | Richer café blend: same milk but 30 g cocoa and 20 g sugar for modern sweetness level [@hersheyCocoa]. |
++-------------------------+-------------------------------------------------------------------------------------------------------------------------------------------------+
+| Drink                   | Ingredient-logic rationale                                                                                                                      |
++=========================+=================================================================================================================================================+
+| **Espresso**            | Straight double shot: 18 g ground coffee, no additives [@scaEspresso].                                                                          |
++-------------------------+-------------------------------------------------------------------------------------------------------------------------------------------------+
+| **Americano**           | Same 18 g espresso diluted with ≈ 4 × its volume of hot water; nothing else required [@scaEspresso].                                            |
++-------------------------+-------------------------------------------------------------------------------------------------------------------------------------------------+
+| **Americano with Milk** | Americano softened with ≈ 60 ml steamed milk – enough to mellow bitterness without turning it into a latte [@whiteAmericano].                   |
++-------------------------+-------------------------------------------------------------------------------------------------------------------------------------------------+
+| **Cappuccino**          | Classic 1 : 1 : 1 build – espresso, ≈ 60 ml steamed milk, equal micro-foam – fills a 150–180 ml cup [@spruceCappuccino].                        |
++-------------------------+-------------------------------------------------------------------------------------------------------------------------------------------------+
+| **Cortado**             | Spanish “cut” drink: equal parts double espresso and ≈ 60 ml steamed milk [@foodwineCortado].                                                   |
++-------------------------+-------------------------------------------------------------------------------------------------------------------------------------------------+
+| **Latte**               | U.S. latte stretches the shot with ≈ 240 ml milk (1 : 4–5 ratio); vanilla version adds 10 ml syrup (≈ 2 pumps) [@coffeeBrosLatte; @toraniPump]. |
++-------------------------+-------------------------------------------------------------------------------------------------------------------------------------------------+
+| **Cocoa**               | Non-coffee mix: 240 ml milk + 22 g cocoa powder + 15 g sugar – standard stovetop proportions [@hersheyCocoa].                                   |
++-------------------------+-------------------------------------------------------------------------------------------------------------------------------------------------+
+| **Hot Chocolate**       | Richer café blend: same milk but 30 g cocoa and 20 g sugar for modern sweetness level [@hersheyCocoa].                                          |
++-------------------------+-------------------------------------------------------------------------------------------------------------------------------------------------+
 
 ### Combining Transaction Data and Recipies
 
@@ -594,12 +614,13 @@ This dataset represents weekly ingredient usage for a coffee vending machines fr
 
 ## Modeling Process
 
-We model each weekly ingredient time series using Seasonal ARIMA (SARIMA), selected for its ability to capture both autoregressive and seasonal dynamics that is present in our exploratory data analysis. We want to produce stable 8-week forecasts to inform weekly inventory restocking decisions. Prophet is used as a secondary benchmark model to compare predictive accuracy.
+We model each weekly ingredient time series using Seasonal ARIMA (SARIMA), selected for its ability to capture both autoregressive and seasonal dynamics that is present in our exploratory data analysis. We want to produce stable 8-week forecasts to inform weekly inventory restocking decisions.
 
 ### Ingredients Model
 
-```{r}
+We first examine each ingredient's stationarity and structure. After confirming data quality and transformation needs, we fit ARIMA models with seasonal terms. The March 23, 2025 week is excluded due to incomplete data.
 
+```{r}
 # Reshaping to time series per ingredient
 ingredients <- c("coffeeG", "milkML", "chocolateG", "sugarG", "vanillaML")
 
@@ -611,83 +632,44 @@ ingredient_ts <- weekly_sales %>%
 ```
 
 ```{r}
+# Exclude March 23, 2025
+ingredient_ts_filtered <- ingredient_ts %>%
+  filter(week != "2025-03-23")
+```
 
+```{r}
 # Long format tsibble
 weekly_long_ingredients <- weekly_sales %>%
   pivot_longer(cols = coffeeG:vanillaML, names_to = "ingredient", values_to = "value") %>%
   as_tsibble(index = week, key = ingredient)
 
+```
+
+```{r}
 # Fitting ARIMA to each ingredient using key grouping
 ingredient_models <- weekly_long_ingredients %>%
   model(ARIMA(value))
 
-```
-
-```{r}
-
 # Fitting Seasonal ARIMA (SARIMA) to each ingredient series
 arima_models <- ingredient_ts %>%
-  model(ARIMA_Model = ARIMA(amount ~ season()))
-
+  model(ARIMA(value))
 ```
-
-```{r}
-
-#install.packages("prophet")
-library(prophet)
-
-# Converting ARIMA input to Prophet format for each ingredient
-prophet_data <- ingredient_ts %>%
-  as_tibble() %>%
-  rename(ds = week, y = amount) %>%
-  split(.$ingredient)
-
-# Function to fit Prophet and generate 8-week forecast
-fit_prophet <- function(df) {
-  m <- prophet(df[, c("ds", "y")], weekly.seasonality = TRUE, yearly.seasonality = FALSE, daily.seasonality = FALSE)
-  future <- make_future_dataframe(m, periods = 8, freq = "week")
-  forecast <- predict(m, future)
-  forecast$ingredient <- unique(df$ingredient)
-  forecast
-}
-
-# Applying Prophet to all ingredients
-prophet_forecasts <- map_df(prophet_data, fit_prophet)
-
-# Actual + Forecasted values for plotting
-prophet_combined <- ingredient_ts %>%
-  as_tibble() %>%
-  rename(ds = week, y = amount) %>%
-  bind_rows(
-    prophet_forecasts %>%
-      select(ds, yhat, ingredient) %>%
-      rename(y = yhat)
-  )
-
-# Plot Prophet forecasts for all ingredients
-prophet_combined %>%
-  ggplot(aes(x = ds, y = y, color = ingredient)) +
-  geom_line() +
-  facet_wrap(~ingredient, scales = "free_y") +
-  labs(title = "8-Week Prophet Forecasts per Ingredient", x = "Week", y = "Predicted Amount") +
-  theme_minimal() +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1))
-```
-
-To benchmark SARIMA models, we applied Prophet to all five ingredients. Prophet captures trend and seasonality non-parametrically. This is useful in business forecasting where abrupt changes or flexible curves are expected. 8-week forecasts were generated.
 
 #### Model Evaluation and Diagnostics
 
 For each ingredient, we examined residual plots from SARIMA to assess randomness, autocorrelation, and normality.
 
+The Ljung-Box test results shown below evaluate whether the **residuals** from the ARIMA models are **uncorrelated**. It shows if the model has sufficiently captured all patterns in the time series.
+
 ```{r}
-# Perform Ljung-Box test on SARIMA residuals
-arima_models %>%
+# Check residuals
+ingredient_models %>%
   augment() %>%
   features(.resid, ljung_box, lag = 8) %>%
-  datatable(caption = "Ljung-Box Test Results for ARIMA Residuals")
-
+  datatable(caption = "Ljung-Box Test Results for Ingredient ARIMA Residuals")
 ```
+
+Since the p-value is for all ingredients are greater than 0.05 (p \> 0.05), there is no significant autocorrelation in residuals. This means that the model is adequate and that the residuals resembles white noise. All ingredient SARIMA models have uncorrelated residuals and can be confidently used for forecasting.
 
 ### Coffee Type Model
 
@@ -744,7 +726,7 @@ revenue_models <- weekly_revenue %>%
 
 ## Generate Forecasts
 
-### Ingredient Forecast
+### Ingredients Forecast
 
 ```{r}
 forecast_ingredients <- ingredient_models %>%
@@ -828,6 +810,36 @@ autoplot(forecast_revenue, weekly_revenue) +
 ```
 
 ## Executive Summary with Actionable Recommendations
+
+#### Executive Summary
+
+This report delivers an integrated forecasting solution for a coffee vending machine using transaction data from March 2024 to March 2025. We modeled the trends in ingredient usage, coffee type unit sales, and overall revenue to generate eight-week forecasts that guide more precise inventory management and restocking decisions.
+
+-   **Ingredient Usage**: From the EDA, we can see that milk is the most volatile and heavily used ingredient, peaking at over 16,000mL in some weeks due to high demand for milk-based drinks. Coffee grounds remain stable, while the usage of chocolate and sugar show seasonal spikes. The seasonal spikes may be due to the cold weather and consumers preferring hot drinks, like hot chocolate and cocoa.
+
+    Seasonal ARIMA models effectively captured ingredient usage patterns, with Ljung-Box tests confirming white-noise residuals. All ingredient seasonal ARIMA models have uncorrelated residuals and is reliable for forecasting.
+
+-   **Drink Sales Patterns**: Americano with Milk and Latte was seen as the most popular and consistently sold drinks. Cortado and Espresso was seen to be less popular in sales and could be reconsidered for prioritization.
+
+-   **Revenue Trends**: Weekly revenue fluctuates and showed peaks that resembled "three hills". The STL decomposition showed a trend, but it did not show significant seasonality. The ETS model projects stable short-term growth.
+
+#### Actionable Recommendations
+
+-   **Focus on High-Selling Drinks**: Focus inventory on Americano with Milk and Latte ingredients to meet ongoing high sales volume. Make sure that there is an uninterrupted ingredient supply for the high-selling drinks.
+
+-   **Prioritize Milk Inventory:** Proactively stock milk with a buffer margin, especially during high-consumption weeks to avoid any out-of-stock situations.
+
+-   **Deprioritize Low-Selling Drinks:** Reevaluate stocking strategy for lower-selling drinks to minimize unnecessary ingredient usage. Can consider rotating low-selling drinks to optimize machine space and ingredient turnover.
+
+-   **Prepare for Seasonal Demand Spikes:** Slightly increase sugar and chocolate inventory in colder months or during promotional periods when the demand for hot drinks increase.
+
+-   **Automate Coffee Reorders:** Use consistent SARIMA forecasts to consider setting up auto-reordering for coffee grounds and to avoid overstocking.
+
+-   **Update Forecast Models Regularly**: Update forecast models regularly to see the changes in trend and seasonality and to take that into effect. Update SARIMA and ETS models quarterly to reflect changes in customer behavior or seasonal effects.
+
+#### Conclusion
+
+By using this report in aligning weekly inventory decisions with the forecasts, the coffee vending machine can reduce waste, maintain product availability, and improve cost-efficiency. This ensures customers to consistently find their preferred drinks stocked and ready.
 
 ## Appendix
 
