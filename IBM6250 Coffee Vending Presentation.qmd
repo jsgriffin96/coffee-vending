@@ -34,7 +34,7 @@ bibliography: refrences.bib
 - Overstock → spoilage + tied-up cash  
 - Decision horizon **8 weeks**
 
-Goal → forecast **cups & ingredients** for two smart machines.
+Goal → forecast **cups & ingredients** for a coffee vending machine.
 
 ---
 
