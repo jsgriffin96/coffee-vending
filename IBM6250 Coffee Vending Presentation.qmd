@@ -11,7 +11,7 @@ format:
     scrollable: true
     incremental: true
     code-fold: true
-    self-contained: false
+    self-contained: true
 execute:
   echo: false
 bibliography: refrences.bib
