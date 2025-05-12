@@ -34,6 +34,12 @@ editor_options:
   chunk_output_type: inline
 ---
 
+::: {.callout-important}
+**Live Version Here:** [Click here to view a live web version of this document.](https://jarrodgriffin.com/coffee-vending)
+
+**Live Presentation Here:** [Click here to view the accompanying presentation version.](https://jarrodgriffin.com/coffee-vending/IBM6250%20Coffee%20Vending%20Presentation.html#/title-slide)
+:::
+
 ## Introduction
 
 Effective inventory control for coffee-vending machines hinges on anticipating weekly ingredient consumption while avoiding costly spoilage. We forecast demand using historical sales from two machines, delivering eight-week projections that guide stock levels and reorder cadence.
