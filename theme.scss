@@ -156,3 +156,11 @@ table,
 }
 
 // No dark‑mode variant — single light theme only
+
+.reveal .slide-logo {
+    bottom: 10px !important;
+    right: 10px !important;
+    width: 40px !important;
+    height: auto !important;
+    max-height: none !important;
+  }

@@ -14,10 +14,19 @@ format:
     self-contained: true
     transition: slide        # or "fade", "zoom", "slide"
     backgroundTransition: fade
+    logo: "photos/logos/CPP_Stacked_2C_Green_RGB-500px.png"
 execute:
   echo: false
 bibliography: refrences.bib
+title-slide-attributes:
+  data-background-video: photos/coffee_machine.mp4   # 6-10 s loop
+  data-background-size:   cover                   # fill canvas
+  data-background-video-muted: ""                # auto-mute
+  data-background-video-loop:  ""                # loop forever
+  data-background-opacity: "0.25"                  # dim for legibility
+
 ---
+
 
 ## Agenda
 ::: incremental
