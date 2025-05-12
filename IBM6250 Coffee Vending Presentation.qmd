@@ -1,6 +1,6 @@
 ---
 title: "Forecast-Driven Inventory for Coffee Vending"
-subtitle: "IBM 6250 • Graduate Marketing Analytics"
+subtitle: "IBM 6250 • Cal Poly Pomona"
 author:
   - Min Gong   •   Jarrod Griffin   •   Ceren Unal   •   Eunice Won
 affiliation: Cal Poly Pomona
