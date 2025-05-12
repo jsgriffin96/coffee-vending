@@ -51,7 +51,7 @@ Goal → forecast **cups & ingredients** for a coffee vending machine.
 
 ## 2 · Data & Assumptions
 ::: incremental
-- Kaggle log: **25 k** rows (Mar 2024 → Mar 2025)  
+- Kaggle data: **3,637** transactions (Mar 2024 → Mar 2025)  
 - 8 drink SKUs → decomposed into 5 ingredients  
 - Aggregated to **weeks** (matches reorder cadence)  
 - Incomplete week 23 Mar 2025 removed  
