@@ -1,41 +1,44 @@
 ---
 title: "IBM6250 Group Project - Coffee Vending"
-author: "Group 1"
+author:
+  - name: Min Gong
+    affiliation: Cal Poly Pomona
+  - name: Jarrod Griffin
+    affiliation: Cal Poly Pomona
+  - name: Ceren Unal
+    affiliation: Cal Poly Pomona
+  - name: Eunice Won
+    affiliation: Cal Poly Pomona
+date: "`r format(Sys.Date(), '%B %d, %Y')`"
 format:
   html:
     toc: true            
     toc-depth: 3         
     self-contained: false
+    code-fold: true
     theme: [litera, theme.scss]
   revealjs:
-    theme: [litera, theme.scss]
+    theme: [simple, theme.scss]
     slide-level: 2    
     scrollable: true
     incremental: true         
     self-contained: false
     output-file: IBM6250 Coffee Vending Presentation.html
+  pdf:
+    toc: true                  
+    toc-depth: 4               
+    number-sections: true
+    documentclass: article     
+    geometry:
+      - margin=1in             
+    pdf-engine: xelatex        
+    keep-tex: false
+
+download: ["pdf"]   
 bibliography: refrences.bib
 editor_options: 
   chunk_output_type: inline
 ---
-
-+-----------+-------------------------------------------------------------------------+-----------+--------------------------------------------------------------------------+
-| Order     | Task / Deliverable                                                      | Owner     | Details                                                                  |
-+==========:+=========================================================================+===========+==========================================================================+
-| **1**     | Input / Intro section                                                   | Jarrod    | Project overview and report framing                                      |
-+-----------+-------------------------------------------------------------------------+-----------+--------------------------------------------------------------------------+
-| **2**     | Exploratory Data Analysis (EDA)                                         | Min       | Data cleaning, visualization, descriptive stats                          |
-+-----------+-------------------------------------------------------------------------+-----------+--------------------------------------------------------------------------+
-| **3**     | Modeling & Forecast / Executive Summary with Actionable Recommendations | Eunice    | Build and validate predictive models (Ingredients Model)                 |
-|           |                                                                         |           |                                                                          |
-|           |                                                                         |           | Predict ingredient usage                                                 |
-|           |                                                                         |           |                                                                          |
-|           |                                                                         |           | Summary, actionable recommendations, and conclusion                      |
-+-----------+-------------------------------------------------------------------------+-----------+--------------------------------------------------------------------------+
-| **4**     | Modeling & Forecast                                                     | Ceren     | Build and validate predictive models (Coffee Type Model & Revenue Model) |
-|           |                                                                         |           |                                                                          |
-|           |                                                                         |           | Predict overall revenue & drink consumption                              |
-+-----------+-------------------------------------------------------------------------+-----------+--------------------------------------------------------------------------+
 
 ## Introduction
 
@@ -44,13 +47,41 @@ Effective inventory control for coffee-vending machines hinges on anticipating w
 ### This report:
 
 ::: incremental
-1.  Imports & cleans transaction data from two coffee-vending machines.\
+1.  Imports & cleans transaction data from a coffee vending machine.\
 2.  Explores key demand drivers.\
 3.  Models weekly sales with Seasonal ARIMA.\
 4.  Delivers eight-week forecasts and stocking recommendations.
 :::
 
-## Data Input and Combining
+## Executive Summary with Actionable Recommendations
+
+#### Executive Summary
+
+This report delivers an integrated forecasting solution for a coffee vending machine using transaction data from March 2024 to March 2025. We modeled the trends in ingredient usage, coffee type unit sales, and overall revenue to generate eight-week forecasts that guide more precise inventory management and restocking decisions.
+
+-   **Ingredient Usage**: From the EDA, we can see that milk is the most volatile and heavily used ingredient, peaking at over 16,000mL in some weeks due to high demand for milk-based drinks. Coffee grounds remain stable, while the usage of chocolate and sugar show seasonal spikes. The seasonal spikes may be due to the cold weather and consumers preferring hot drinks, like hot chocolate and cocoa.
+
+    Seasonal ARIMA models effectively captured ingredient usage patterns, with Ljung-Box tests confirming white-noise residuals. All ingredient seasonal ARIMA models have uncorrelated residuals and is reliable for forecasting.
+
+-   **Drink Sales Patterns**: Americano with Milk and Latte was seen as the most popular and consistently sold drinks. Cortado and Espresso was seen to be less popular in sales and could be reconsidered for prioritization.
+
+-   **Revenue Trends**: Weekly revenue fluctuates and showed peaks that resembled "three hills". The STL decomposition showed a trend, but it did not show significant seasonality. The ETS model projects stable short-term growth.
+
+#### Actionable Recommendations
+
+-   **Focus on High-Selling Drinks**: Focus inventory on Americano with Milk and Latte ingredients to meet ongoing high sales volume. Make sure that there is an uninterrupted ingredient supply for the high-selling drinks.
+
+-   **Prioritize Milk Inventory:** Proactively stock milk with a buffer margin, especially during high-consumption weeks to avoid any out-of-stock situations.
+
+-   **Deprioritize Low-Selling Drinks:** Reevaluate stocking strategy for lower-selling drinks to minimize unnecessary ingredient usage. Can consider rotating low-selling drinks to optimize machine space and ingredient turnover.
+
+-   **Prepare for Seasonal Demand Spikes:** Slightly increase sugar and chocolate inventory in colder months or during promotional periods when the demand for hot drinks increase.
+
+-   **Automate Coffee Reorders:** Use consistent SARIMA forecasts to consider setting up auto-reordering for coffee grounds and to avoid overstocking.
+
+-   **Update Forecast Models Regularly**: Update forecast models regularly to see the changes in trend and seasonality and to take that into effect. Update SARIMA and ETS models quarterly to reflect changes in customer behavior or seasonal effects.
+
+## Data and Assumptions
 
 Kaggle data is from two vending machines. Below we will import the two datasets and combine them.
 
@@ -110,7 +141,7 @@ unique(sales$coffee_name)%>%sort()
 #### Ingredients
 
 ```{r recipie list}
-
+#| code-fold: show
 
 recipes <- tribble(
   ~coffee_name,            ~coffeeG, ~milkML, ~chocolateG,  ~sugarG, ~vanillaML,
@@ -248,7 +279,7 @@ plot_ly(
 
 ```
 
-## Exploratory Data Analysis(EDA)
+## Exploratory Insights (EDA)
 
 ### Total Revenue Series
 
@@ -589,7 +620,7 @@ Among all ingredients, milk usage exhibits the highest variation and fluctuation
 
 Given that milk consistently demonstrates the highest demand, it is reasonable to expect that it will remain the most used ingredient over the next 8 weeks. Meanwhile, ingredients such as coffee and chocolate are likely to maintain stable usage patterns, with only minor fluctuations potentially arising from consumer trends or specific events.
 
-## Modeling Process
+## Modeling Method Choice and Diagnostics
 
 We model each weekly ingredient time series using Seasonal ARIMA (SARIMA), selected for its ability to capture both autoregressive and seasonal dynamics that is present in our exploratory data analysis. We want to produce stable 8-week forecasts to inform weekly inventory restocking decisions.
 
@@ -701,7 +732,7 @@ revenue_models <- weekly_revenue %>%
   model(ETS(total_revenue))
 ```
 
-## Generate Forecasts
+## Generate Forecasts Results
 
 ### Ingredients Forecast
 
@@ -786,33 +817,7 @@ autoplot(forecast_revenue, weekly_revenue) +
   theme_minimal()
 ```
 
-## Executive Summary with Actionable Recommendations
 
-#### Executive Summary
-
-This report delivers an integrated forecasting solution for a coffee vending machine using transaction data from March 2024 to March 2025. We modeled the trends in ingredient usage, coffee type unit sales, and overall revenue to generate eight-week forecasts that guide more precise inventory management and restocking decisions.
-
--   **Ingredient Usage**: From the EDA, we can see that milk is the most volatile and heavily used ingredient, peaking at over 16,000mL in some weeks due to high demand for milk-based drinks. Coffee grounds remain stable, while the usage of chocolate and sugar show seasonal spikes. The seasonal spikes may be due to the cold weather and consumers preferring hot drinks, like hot chocolate and cocoa.
-
-    Seasonal ARIMA models effectively captured ingredient usage patterns, with Ljung-Box tests confirming white-noise residuals. All ingredient seasonal ARIMA models have uncorrelated residuals and is reliable for forecasting.
-
--   **Drink Sales Patterns**: Americano with Milk and Latte was seen as the most popular and consistently sold drinks. Cortado and Espresso was seen to be less popular in sales and could be reconsidered for prioritization.
-
--   **Revenue Trends**: Weekly revenue fluctuates and showed peaks that resembled "three hills". The STL decomposition showed a trend, but it did not show significant seasonality. The ETS model projects stable short-term growth.
-
-#### Actionable Recommendations
-
--   **Focus on High-Selling Drinks**: Focus inventory on Americano with Milk and Latte ingredients to meet ongoing high sales volume. Make sure that there is an uninterrupted ingredient supply for the high-selling drinks.
-
--   **Prioritize Milk Inventory:** Proactively stock milk with a buffer margin, especially during high-consumption weeks to avoid any out-of-stock situations.
-
--   **Deprioritize Low-Selling Drinks:** Reevaluate stocking strategy for lower-selling drinks to minimize unnecessary ingredient usage. Can consider rotating low-selling drinks to optimize machine space and ingredient turnover.
-
--   **Prepare for Seasonal Demand Spikes:** Slightly increase sugar and chocolate inventory in colder months or during promotional periods when the demand for hot drinks increase.
-
--   **Automate Coffee Reorders:** Use consistent SARIMA forecasts to consider setting up auto-reordering for coffee grounds and to avoid overstocking.
-
--   **Update Forecast Models Regularly**: Update forecast models regularly to see the changes in trend and seasonality and to take that into effect. Update SARIMA and ETS models quarterly to reflect changes in customer behavior or seasonal effects.
 
 #### Conclusion
 
