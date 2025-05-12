@@ -1,0 +1,168 @@
+---
+title: "Forecast-Driven Inventory for Coffee Vending"
+subtitle: "IBM 6250 • Graduate Marketing Analytics"
+author:
+  - Min Gong   •   Jarrod Griffin   •   Ceren Unal   •   Eunice Won
+affiliation: Cal Poly Pomona
+format:
+  revealjs:
+    theme: simple
+    slide-level: 2
+    scrollable: true
+    incremental: true
+    code-fold: true
+    self-contained: false
+execute:
+  echo: false
+bibliography: refrences.bib
+---
+
+## Agenda
+::: incremental
+1. Business Problem  
+2. Data & Assumptions  
+3. Exploratory Insights  
+4. Modeling Approach  
+5. Forecast Results  
+6. Recommendations  
+:::
+
+## 1 · Business Problem
+**Pain points**
+
+- Stock-out → lost sales  
+- Overstock → spoilage + tied-up cash  
+- Decision horizon **8 weeks**
+
+Goal → forecast **cups & ingredients** for two smart machines.
+
+---
+
+## 2 · Data & Assumptions
+::: incremental
+- Kaggle log: **25 k** rows (Mar 2024 → Mar 2025)  
+- 8 drink SKUs → decomposed into 5 ingredients  
+- Aggregated to **weeks** (matches reorder cadence)  
+- Incomplete week 23 Mar 2025 removed  
+:::
+
+```{r setup}
+#| label: setup
+#| warning: false
+#| message: false
+library(tidyverse); library(lubridate); library(tsibble); library(fpp3)
+recipes <- tribble(
+  ~coffee_name,            ~coffeeG, ~milkML, ~chocolateG, ~sugarG, ~vanillaML,
+  "AMERICANO",                18, 0,      0, 0,  0,
+  "AMERICANO WITH MILK",      18, 60,     0, 0,  0,
+  "CAPPUCCINO",               18, 100,    0, 0,  0,
+  "COCOA",                     0, 240,   22, 15, 0,
+  "CORTADO",                  18, 60,     0, 0,  0,
+  "ESPRESSO",                 18, 0,      0, 0,  0,
+  "HOT CHOCOLATE",             0, 240,   30, 20, 0,
+  "LATTE",                    18, 240,    0, 0, 10
+)
+
+sales <- read_csv("data/index_1.csv") |>
+  mutate(machine_id = "machine1",
+         date        = as_date(date),
+         coffee_name = toupper(coffee_name)) |>
+  left_join(recipes, by = "coffee_name")
+
+weekly_sales <- sales |>
+  mutate(week = floor_date(date, "week")) |>
+  group_by(week) |>
+  summarise(across(coffeeG:vanillaML, sum, na.rm = TRUE),
+            sales_n = n(), .groups = "drop") |>
+  as_tsibble(index = week)
+```
+
+---
+
+### Weekly Cups vs Ingredients
+```{r cups_ing}
+#| fig-cap: "Milk drives most of the volatility"
+weekly_sales |>
+  pivot_longer(coffeeG:sales_n, names_to = "metric", values_to = "value") |>
+  ggplot(aes(week, value, colour = metric)) +
+  geom_line() + theme_minimal() +
+  labs(y = "", colour = "") 
+```
+
+---
+
+## 3 · Exploratory Insights
+::: incremental
+- **Revenue** shows “three-hill” trend, no strong seasonality  
+- **Americano w/ Milk + Latte = 55 %** of cups  
+- **Milk** is the key stock-out risk (largest variance)  
+:::
+
+---
+
+### Revenue Trend
+```{r revenue_plot}
+#| fig-cap: "Weekly revenue (proxy)"
+weekly_sales |>
+  mutate(revenue = coffeeG*0.30 + milkML*0.005 + chocolateG*0.02 + sugarG*0.01) |>
+  ggplot(aes(week, revenue)) +
+  geom_line(colour = "steelblue") + theme_minimal() +
+  labs(x = "", y = "$")
+```
+
+---
+
+## 4 · Modeling Approach
+::: incremental
+- **Ingredients:** auto-selected SARIMA (`fable::ARIMA`) — Ljung-Box p > 0.05  
+- **Coffee types:** ARIMA on unit sales (auto differencing)  
+- **Revenue:** ETS (A,N,N) → handles trend & changing variance  
+- Forecast horizon **h = 8 weeks**  
+:::
+
+---
+
+## 5 · Forecast Results
+### Ingredients (SARIMA)
+
+![](photos/sarima ingredients.png){width=100%}
+
+---
+
+### Coffee Types (ARIMA)
+
+![](photos/coffee-types-arima.png){width=100%}
+
+
+---
+
+### Revenue (ETS)
+```{r rev_forecast}
+#| fig-cap: "Stable short-term revenue outlook"
+weekly_revenue <- sales |>
+  mutate(week = floor_date(date, "week")) |>
+  group_by(week) |>
+  summarise(revenue = sum(money, na.rm = TRUE), .groups = "drop") |>
+  as_tsibble(index = week)
+
+rev_model <- weekly_revenue |> model(ETS(revenue))
+forecast(rev_model, h = "8 weeks") |>
+  autoplot(weekly_revenue) + theme_minimal() + labs(y = "$")
+```
+
+---
+
+## 6 · Recommendations
+::: incremental
+1. **Prioritise milk** — carry +20 % buffer Nov-Feb  
+2. Keep **Americano + Latte** always in stock  
+3. **Rotate low sellers** (Cortado, Espresso) to free space  
+4. **Automate coffee-ground reorders** (low variance)  
+5. **Refresh models quarterly** as tastes evolve  
+:::
+
+---
+
+## Q & A
+### Thank you  
+IBM 6250 • Spring 2025

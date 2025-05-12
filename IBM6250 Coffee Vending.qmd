@@ -67,6 +67,9 @@ This report delivers an integrated forecasting solution for a coffee vending mac
 
 -   **Revenue Trends**: Weekly revenue fluctuates and showed peaks that resembled "three hills". The STL decomposition showed a trend, but it did not show significant seasonality. The ETS model projects stable short-term growth.
 
+For forecasting, we used two different methods: ARIMA for coffee types and ETS for revenue. The ARIMA model was used to automatically difference the data and then revert forecasts to the original scale, enabling predictions of unit sales over time. The model indicates that sales will remain mostly stable over the next eight weeks, though cortado, latte, and hot chocolate may see slight declines, suggesting a potential need to reduce their production and packaging. 
+The ETS model, which emphasizes recent trends, forecasts stable overall revenue during this period. We opted for ETS to generate a more robust model based on the trend with increasing periodic variance. Since we are forecasting for a short period (8 weeks) for higher accuracy, we don’t see the model capturing the upwards trend throughout the year.
+
 #### Actionable Recommendations
 
 -   **Focus on High-Selling Drinks**: Focus inventory on Americano with Milk and Latte ingredients to meet ongoing high sales volume. Make sure that there is an uninterrupted ingredient supply for the high-selling drinks.
@@ -293,14 +296,6 @@ weekly_revenue <- sales %>%
 ```
 
 ```{r}
-# weekly total revenue time series plot
-autoplot(weekly_revenue, total_revenue) +
-  labs(title = "Weekly Total Revenue",
-       y = "Revenue ($)",
-       x = "Week") +
-  theme_minimal()
-
-
 #Interactive weekly revenue
 weekly_revenue %>%
   ggplot(aes(x = week, y = total_revenue)) +
