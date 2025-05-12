@@ -6,12 +6,14 @@ author:
 affiliation: Cal Poly Pomona
 format:
   revealjs:
-    theme: simple
+    theme: [league, theme.scss]
     slide-level: 2
     scrollable: true
     incremental: true
     code-fold: true
     self-contained: true
+    transition: slide        # or "fade", "zoom", "slide"
+    backgroundTransition: fade
 execute:
   echo: false
 bibliography: refrences.bib
@@ -91,15 +93,6 @@ weekly_sales |>
 
 ---
 
-## 3 · Exploratory Insights
-::: incremental
-- **Revenue** shows “three-hill” trend, no strong seasonality  
-- **Americano w/ Milk + Latte = 55 %** of cups  
-- **Milk** is the key stock-out risk (largest variance)  
-:::
-
----
-
 ### Revenue Trend
 ```{r revenue_plot}
 #| fig-cap: "Weekly revenue (proxy)"
@@ -111,6 +104,17 @@ weekly_sales |>
 ```
 
 ---
+
+## 3 · Exploratory Insights
+::: incremental
+- **Revenue** shows “three-hill” trend, no strong seasonality  
+- **Americano w/ Milk + Latte = 55 %** of cups  
+- **Milk** is the key stock-out risk (largest variance)  
+:::
+
+---
+
+
 
 ## 4 · Modeling Approach
 ::: incremental
