@@ -108,8 +108,6 @@ library(forecast)
 library(tseries)
 library(gt)
 library(plotly)
-library(janitor)
-library(vars)
 ```
 
 ### Raw Transaction Data
@@ -800,20 +798,41 @@ By using this report in aligning weekly inventory decisions with the forecasts, 
 
 ```{r var, fig.width=10, fig.height=6}
 
-#install.packages("vars")
-library(vars)
-library(tibble)
-library(forecast)
-
 var_data <- weekly_sales %>%
   as.data.frame() %>%
   dplyr::select(coffeeG, milkML, chocolateG, sugarG, vanillaML) %>%
   tidyr::drop_na()
 
 var_ts <- ts(var_data, frequency = 52)
-var_model <- VAR(var_ts, type = "const", lag.max = 8, ic = "AIC")
+var_model <- vars::VAR(var_ts, type = "const", lag.max = 8, ic = "AIC")
 var_fc <- predict(var_model, n.ahead = 8)
 plot(var_fc)
+
+```
+
+```{r}
+
+# Calculate weekly ingredient usage per coffee type
+weekly_ingredient_by_drink <- sales_ingredients %>%
+  mutate(week = floor_date(date, unit = "week")) %>%
+  group_by(week, coffee_name) %>%
+  summarise(across(c(coffeeG, milkML, chocolateG, sugarG, vanillaML), sum, na.rm = TRUE),
+            .groups = "drop")
+
+weekly_ingredient_props <- weekly_ingredient_by_drink %>%
+  pivot_longer(cols = coffeeG:vanillaML, names_to = "ingredient", values_to = "amount") %>%
+  group_by(week, ingredient) %>%
+  mutate(proportion = amount / sum(amount)) %>%
+  ungroup()
+
+
+ggplot(weekly_ingredient_props, aes(x = week, y = proportion, fill = coffee_name)) +
+  geom_area(position = "fill") +
+  facet_wrap(~ingredient, scales = "free_y") +
+  labs(title = "Proportion of Each Ingredient by Coffee Type Over Time",
+       y = "Proportion of Ingredient Used",
+       x = "Week") +
+  theme_minimal()
 
 ```
 
