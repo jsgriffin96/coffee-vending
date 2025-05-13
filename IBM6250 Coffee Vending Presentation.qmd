@@ -178,4 +178,4 @@ forecast(rev_model, h = "8 weeks") |>
 
 ## Q & A
 ### Thank you  
-IBM 6250 • Spring 2025
+IBM 6520 • Spring 2025
