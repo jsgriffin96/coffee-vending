@@ -1,5 +1,5 @@
 ---
-title: "IBM6250 Group Project - Coffee Vending"
+title: "IBM6520 Group Project - Coffee Vending"
 author:
   - name: Min Gong
     affiliation: Cal Poly Pomona
