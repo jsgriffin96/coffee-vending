@@ -798,6 +798,24 @@ By using this report in aligning weekly inventory decisions with the forecasts, 
 
 ## Bonus After-Presentation Vector Autoregression (VAR)
 
+```{r var, fig.width=10, fig.height=6}
+
+#install.packages("vars")
+library(vars)
+library(tibble)
+library(forecast)
+
+var_data <- weekly_sales %>%
+  as.data.frame() %>%
+  dplyr::select(coffeeG, milkML, chocolateG, sugarG, vanillaML) %>%
+  tidyr::drop_na()
+
+var_ts <- ts(var_data, frequency = 52)
+var_model <- VAR(var_ts, type = "const", lag.max = 8, ic = "AIC")
+var_fc <- predict(var_model, n.ahead = 8)
+plot(var_fc)
+
+```
 
 ## Appendix
 
