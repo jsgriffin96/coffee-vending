@@ -108,6 +108,8 @@ library(forecast)
 library(tseries)
 library(gt)
 library(plotly)
+library(janitor)
+library(vars)
 ```
 
 ### Raw Transaction Data
@@ -793,6 +795,9 @@ autoplot(forecast_revenue, weekly_revenue) +
 #### Conclusion
 
 By using this report in aligning weekly inventory decisions with the forecasts, the coffee vending machine can reduce waste, maintain product availability, and improve cost-efficiency. This ensures customers to consistently find their preferred drinks stocked and ready.
+
+## Bonus After-Presentation Vector Autoregression (VAR)
+
 
 ## Appendix
 
